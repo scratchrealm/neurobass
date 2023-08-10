@@ -36,7 +36,7 @@ const options: {
     resources?: boolean
 }[] = [
     {key: 'nba_type', label: 'Analysis type', type: 'string', required: true, readOnly: true},
-    {key: 'recording_nwb_file', label: 'NWB file', type: 'string', required: true},
+    {key: 'recording_nwb_file', label: 'Recording NWB file', type: 'string', required: true},
     {key: 'recording_electrical_series_path', label: 'Elec. series path', type: 'string', required: true},
     {key: 'num_cpus', label: 'num. CPUs', type: 'number', required: true, resources: true},
     {key: 'ram_gb', label: 'RAM (GB)', type: 'number', required: true, resources: true},
@@ -155,7 +155,7 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
                         }
                     </tbody>
                 </table>
-                <h4>Required resources (may affect whether or how quickly the job gets picked up by a compute resource):</h4>
+                {/* <h4>Required resources (may affect whether or how quickly the job gets picked up by a compute resource):</h4>
                 <table className="table1" style={{maxWidth: 400}}>
                     <tbody>
                         {
@@ -183,7 +183,7 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
                             ))
                         }
                     </tbody>
-                </table>
+                </table> */}
             </div>
         </div>
     )

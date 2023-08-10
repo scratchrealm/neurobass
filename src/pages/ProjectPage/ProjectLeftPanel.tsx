@@ -1,4 +1,4 @@
-import { ContentCopy, Download, Edit, ImportContacts, ImportExport, NoteAdd, Refresh, Settings } from "@mui/icons-material";
+import { ContentCopy, Download, Edit, NoteAdd, PlayArrow, Refresh, Settings } from "@mui/icons-material";
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
 import { useModalDialog } from "../../ApplicationBar";
 import Hyperlink from "../../components/Hyperlink";
@@ -12,6 +12,7 @@ import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
 import CloneProjectWindow from "./CloneProjectWindow/CloneProjectWindow";
 import ImportNwbWindow from "./ImportNwbWindow/ImportNwbWindow";
+import NewAnalysisWindow from "./NewAnalysisWindow/NewAnalysisWindow";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
 import ProjectFileBrowser2 from "./ProjectFileBrowser/ProjectFileBrowser2";
 import { useProject } from "./ProjectPageContext";
@@ -27,6 +28,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: cloneProjectWindowVisible, handleOpen: openCloneProjectWindow, handleClose: closeCloneProjectWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
+    const {visible: newAnalysisWindowVisible, handleOpen: openNewAnalysisWindow, handleClose: closeNewAnalysisWindow} = useModalDialog()
     const {visible: importNwbWindowVisible, handleOpen: openImportNwbWindow, handleClose: closeImportNwbWindow} = useModalDialog()
     const {workspace, workspaceRole} = useWorkspace()
     const {setRoute} = useRoute()
@@ -104,10 +106,11 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
     const handleCreateFile = useCallback(async (fileName: string, fileContent: string) => {
         await setProjectFileContent(workspaceId, projectId, fileName, fileContent, auth)
         closeNewFileWindow()
-        closeNewFileWindow()
+        closeNewAnalysisWindow()
+        closeImportNwbWindow()
         refreshFiles()
         openTab(`file:${fileName}`)
-    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow])
+    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow, closeImportNwbWindow, closeNewAnalysisWindow])
 
     const cloneProjectTitle = userId ? 'Clone this project' : 'You must be logged in to clone this project.'
 
@@ -147,12 +150,17 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
             <hr />
 
             <div style={{paddingBottom: 5}}>
-            <SmallIconButton onClick={openImportNwbWindow} title="Import NWB" icon={<Download />} label="Import NWB" fontSize={24} />
-                &nbsp;&nbsp;
+                <SmallIconButton onClick={openImportNwbWindow} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
+                <br />
+                <SmallIconButton onClick={openNewAnalysisWindow} title="Create a new analysis" icon={<PlayArrow />} label="Create analysis" fontSize={24} />
+                <br />
                 <SmallIconButton onClick={openNewFileWindow} title="Create a new file" icon={<NoteAdd />} label="Create file" fontSize={24} />
                 &nbsp;&nbsp;
                 <SmallIconButton onClick={refreshFiles} title="Refresh files" icon={<Refresh />} fontSize={24} />
             </div>
+
+            <hr />
+
             <ProjectFileBrowser2
                 projectFiles={projectFiles}
                 onOpenFile={handleOpenFile}
@@ -180,6 +188,14 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
                 onClose={closeNewFileWindow}
             >
                 <NewFileWindow
+                    onCreateFile={handleCreateFile}
+                />
+            </ModalWindow>
+            <ModalWindow
+                open={newAnalysisWindowVisible}
+                onClose={closeNewAnalysisWindow}
+            >
+                <NewAnalysisWindow
                     onCreateFile={handleCreateFile}
                 />
             </ModalWindow>

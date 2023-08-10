@@ -242,93 +242,6 @@ export class RunningJob {
         if (this.#childProcess) {
             throw Error('Unexpected: Child process already running')
         }
-        const scriptFileName = this.scriptJob.scriptFileName
-        const scriptFileContent = await this._loadFileContent(this.scriptJob.scriptFileName)
-        const scriptJobDir = path.join(this.config.dir, 'script_jobs', this.scriptJob.scriptJobId)
-        fs.mkdirSync(scriptJobDir, {recursive: true})
-        fs.writeFileSync(path.join(scriptJobDir, scriptFileName), scriptFileContent)
-
-        const projectFiles = await this._loadProjectFiles(this.scriptJob.projectId)
-
-        if (scriptFileName.endsWith('.py')) {
-            for (const pf of projectFiles) {
-                let includeFile = false
-                if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
-                    // the file is referenced in the script
-                    includeFile = true
-                }
-                else if (pf.fileName.endsWith('.py')) {
-                    const moduleName = pf.fileName.replace('.py', '')
-                    if ((scriptFileContent.includes(`import ${moduleName}`)) || (scriptFileContent.includes(`from ${moduleName}`)) || (scriptFileContent.includes(`import ${moduleName}.`)) || (scriptFileContent.includes(`from ${moduleName}.`))) {
-                        // the module is imported in the script
-                        includeFile = true
-                    }
-                }
-                if (includeFile) {
-                    const content = await this._loadFileContent(pf.fileName)
-                    fs.writeFileSync(path.join(scriptJobDir, pf.fileName), content)
-                }
-            }
-        }
-
-        if (scriptFileName.endsWith('.nba')) {
-            const nbaFileName = scriptFileName
-            const nbaFileContent = scriptFileContent
-            const nba = yaml.load(nbaFileContent)
-            const nbaType = nba['nba_type']
-            let runPyContent: string
-            if (nbaType === 'mountainsort5') {
-                const recordingNwbFile = nba['recording_nwb_file']
-                if (!recordingNwbFile) {
-                    throw new Error('Missing recording_nwb_file')
-                }
-                const x = projectFiles.find(pf => pf.fileName === recordingNwbFile)
-                if (!x) {
-                    throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
-                }
-                const recordingNwbFileContent = await this._loadFileContent(recordingNwbFile)
-                fs.writeFileSync(path.join(scriptJobDir, recordingNwbFile), recordingNwbFileContent)
-                const recordingElectricalSeriesPath = nba['recording_electrical_series_path']
-                if (!recordingElectricalSeriesPath) {
-                    throw new Error('Missing recording_electrical_series_path')
-                }
-                runPyContent = createMountainsort5RunPyContent(nbaFileName)
-            }
-            else {
-                throw new Error(`Unexpected nba type: ${nbaType}`)
-            }
-            fs.writeFileSync(path.join(scriptJobDir, 'run.py'), runPyContent)
-            const runShContent = `
-set -e # exit on error and use return code of last command as return code of script
-clean_up () {
-    ARG=$?
-    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-    exit $ARG
-} 
-trap clean_up EXIT
-python3 run.py
-`
-            fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
-        }
-        else if (scriptFileName.endsWith('.py')) {
-            const runShContent = `
-set -e # exit on error and use return code of last command as return code of script
-clean_up () {
-    ARG=$?
-    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-    exit $ARG
-} 
-trap clean_up EXIT
-python3 ${scriptFileName}
-`
-            fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
-        }
-
-        const uploadNbaOutput = async () => {
-            const NbaOutput = await loadNbaOutput(`${scriptJobDir}/output`)
-            console.info(`Uploading NBA output to ${scriptFileName}.out (${this.scriptJob.scriptJobId})`)
-            await this._setProjectFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
-        }
 
         let consoleOutput = ''
         let lastUpdateConsoleOutputTimestamp = Date.now()
@@ -337,7 +250,96 @@ python3 ${scriptFileName}
             await this._setScriptJobProperty('consoleOutput', consoleOutput)
         }
         const timer = Date.now()
+
         try {
+            const scriptFileName = this.scriptJob.scriptFileName
+            const scriptFileContent = await this._loadFileContent(this.scriptJob.scriptFileName)
+            const scriptJobDir = path.join(this.config.dir, 'script_jobs', this.scriptJob.scriptJobId)
+            fs.mkdirSync(scriptJobDir, {recursive: true})
+            fs.writeFileSync(path.join(scriptJobDir, scriptFileName), scriptFileContent)
+
+            const projectFiles = await this._loadProjectFiles(this.scriptJob.projectId)
+
+            if (scriptFileName.endsWith('.py')) {
+                for (const pf of projectFiles) {
+                    let includeFile = false
+                    if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
+                        // the file is referenced in the script
+                        includeFile = true
+                    }
+                    else if (pf.fileName.endsWith('.py')) {
+                        const moduleName = pf.fileName.replace('.py', '')
+                        if ((scriptFileContent.includes(`import ${moduleName}`)) || (scriptFileContent.includes(`from ${moduleName}`)) || (scriptFileContent.includes(`import ${moduleName}.`)) || (scriptFileContent.includes(`from ${moduleName}.`))) {
+                            // the module is imported in the script
+                            includeFile = true
+                        }
+                    }
+                    if (includeFile) {
+                        const content = await this._loadFileContent(pf.fileName)
+                        fs.writeFileSync(path.join(scriptJobDir, pf.fileName), content)
+                    }
+                }
+            }
+
+            if (scriptFileName.endsWith('.nba')) {
+                const nbaFileName = scriptFileName
+                const nbaFileContent = scriptFileContent
+                const nba = yaml.load(nbaFileContent)
+                const nbaType = nba['nba_type']
+                let runPyContent: string
+                if (nbaType === 'mountainsort5') {
+                    const recordingNwbFile = nba['recording_nwb_file']
+                    if (!recordingNwbFile) {
+                        throw new Error('Missing recording_nwb_file')
+                    }
+                    const x = projectFiles.find(pf => pf.fileName === recordingNwbFile)
+                    if (!x) {
+                        throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
+                    }
+                    const recordingNwbFileContent = await this._loadFileContent(recordingNwbFile)
+                    fs.writeFileSync(path.join(scriptJobDir, recordingNwbFile), recordingNwbFileContent)
+                    const recordingElectricalSeriesPath = nba['recording_electrical_series_path']
+                    if (!recordingElectricalSeriesPath) {
+                        throw new Error('Missing recording_electrical_series_path')
+                    }
+                    runPyContent = createMountainsort5RunPyContent(nbaFileName)
+                }
+                else {
+                    throw new Error(`Unexpected nba type: ${nbaType}`)
+                }
+                fs.writeFileSync(path.join(scriptJobDir, 'run.py'), runPyContent)
+                const runShContent = `
+    set -e # exit on error and use return code of last command as return code of script
+    clean_up () {
+        ARG=$?
+        chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
+        exit $ARG
+    } 
+    trap clean_up EXIT
+    python3 run.py
+    `
+                fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
+            }
+            else if (scriptFileName.endsWith('.py')) {
+                const runShContent = `
+    set -e # exit on error and use return code of last command as return code of script
+    clean_up () {
+        ARG=$?
+        chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
+        exit $ARG
+    } 
+    trap clean_up EXIT
+    python3 ${scriptFileName}
+    `
+                fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
+            }
+
+            const uploadNbaOutput = async () => {
+                const NbaOutput = await loadNbaOutput(`${scriptJobDir}/output`)
+                console.info(`Uploading NBA output to ${scriptFileName}.out (${this.scriptJob.scriptJobId})`)
+                await this._setProjectFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
+            }
+
             await new Promise<void>((resolve, reject) => {
                 let returned = false
 
@@ -468,6 +470,51 @@ python3 ${scriptFileName}
                     }
                 })
             })
+            
+            await updateConsoleOutput()
+
+            if (scriptFileName.endsWith('.nba')) {
+                await uploadNbaOutput()
+            }
+            else {
+                const outputFileNames: string[] = []
+                const files = fs.readdirSync(scriptJobDir)
+                for (const file of files) {
+                    if ((file !== scriptFileName) && (file !== 'run.sh')) {
+                        // check whether it is a file
+                        const stat = fs.statSync(path.join(scriptJobDir, file))
+                        if (stat.isFile()) {
+                            outputFileNames.push(file)
+                        }
+                    }
+                }
+                const maxOutputFiles = 5
+                if (outputFileNames.length > maxOutputFiles) {
+                    console.info('Too many output files.')
+                    await this._setScriptJobProperty('error', 'Too many output files.')
+                    await this._setScriptJobProperty('status', 'failed')
+                    this.#status = 'failed'
+
+                    const elapsedSec = (Date.now() - timer) / 1000
+                    await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
+
+                    this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
+                    return
+                }
+                for (const outputFileName of outputFileNames) {
+                    console.info('Uploading output file: ' + outputFileName)
+                    const content = fs.readFileSync(path.join(scriptJobDir, outputFileName), 'utf8')
+                    await this._setProjectFile(outputFileName, content)
+                }
+            }
+
+            await this._setScriptJobProperty('status', 'completed')
+            this.#status = 'completed'
+
+            const elapsedSec = (Date.now() - timer) / 1000
+            await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
+
+            this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
         }
         catch (err) {
             await updateConsoleOutput()
@@ -481,50 +528,6 @@ python3 ${scriptFileName}
             this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
             return
         }
-        await updateConsoleOutput()
-
-        if (scriptFileName.endsWith('.nba')) {
-            await uploadNbaOutput()
-        }
-        else {
-            const outputFileNames: string[] = []
-            const files = fs.readdirSync(scriptJobDir)
-            for (const file of files) {
-                if ((file !== scriptFileName) && (file !== 'run.sh')) {
-                    // check whether it is a file
-                    const stat = fs.statSync(path.join(scriptJobDir, file))
-                    if (stat.isFile()) {
-                        outputFileNames.push(file)
-                    }
-                }
-            }
-            const maxOutputFiles = 5
-            if (outputFileNames.length > maxOutputFiles) {
-                console.info('Too many output files.')
-                await this._setScriptJobProperty('error', 'Too many output files.')
-                await this._setScriptJobProperty('status', 'failed')
-                this.#status = 'failed'
-
-                const elapsedSec = (Date.now() - timer) / 1000
-                await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
-
-                this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
-                return
-            }
-            for (const outputFileName of outputFileNames) {
-                console.info('Uploading output file: ' + outputFileName)
-                const content = fs.readFileSync(path.join(scriptJobDir, outputFileName), 'utf8')
-                await this._setProjectFile(outputFileName, content)
-            }
-        }
-
-        await this._setScriptJobProperty('status', 'completed')
-        this.#status = 'completed'
-
-        const elapsedSec = (Date.now() - timer) / 1000
-        await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
-
-        this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
     }
 }
 

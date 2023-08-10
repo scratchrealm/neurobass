@@ -22,7 +22,7 @@ const HomePage: FunctionComponent<Props> = ({width, height}) => {
                     <p style={{textAlign: 'center'}}>
                         Create, run, and share neuroscience analyses. <Hyperlink onClick={() => setRoute({page: 'about'})}>Learn more...</Hyperlink>
                     </p>
-                    <p>This software is in <a href="https://github.com/scratchrealm/neurobass/blob/main/doc/beta_testing.md" target="_blank" rel="noreferrer">beta</a></p>
+                    <p>This software is a prototype.</p>
                     <hr />
                     <h2>Community Workspaces</h2>
                     <WorkspacesTable filter="community" />

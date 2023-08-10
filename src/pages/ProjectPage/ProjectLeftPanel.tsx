@@ -1,4 +1,4 @@
-import { ContentCopy, Edit, NoteAdd, Refresh, Settings } from "@mui/icons-material";
+import { ContentCopy, Download, Edit, ImportContacts, ImportExport, NoteAdd, Refresh, Settings } from "@mui/icons-material";
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
 import { useModalDialog } from "../../ApplicationBar";
 import Hyperlink from "../../components/Hyperlink";
@@ -11,6 +11,7 @@ import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
 import CloneProjectWindow from "./CloneProjectWindow/CloneProjectWindow";
+import ImportNwbWindow from "./ImportNwbWindow/ImportNwbWindow";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
 import ProjectFileBrowser2 from "./ProjectFileBrowser/ProjectFileBrowser2";
 import { useProject } from "./ProjectPageContext";
@@ -26,6 +27,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: cloneProjectWindowVisible, handleOpen: openCloneProjectWindow, handleClose: closeCloneProjectWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
+    const {visible: importNwbWindowVisible, handleOpen: openImportNwbWindow, handleClose: closeImportNwbWindow} = useModalDialog()
     const {workspace, workspaceRole} = useWorkspace()
     const {setRoute} = useRoute()
     const handleOpenFile = useCallback((fileName: string) => {
@@ -102,6 +104,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
     const handleCreateFile = useCallback(async (fileName: string, fileContent: string) => {
         await setProjectFileContent(workspaceId, projectId, fileName, fileContent, auth)
         closeNewFileWindow()
+        closeNewFileWindow()
         refreshFiles()
         openTab(`file:${fileName}`)
     }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow])
@@ -144,8 +147,10 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
             <hr />
 
             <div style={{paddingBottom: 5}}>
-                <SmallIconButton onClick={openNewFileWindow} title="Create a new file" icon={<NoteAdd />} label="new file" fontSize={24} />
-                &nbsp;&nbsp;&nbsp;&nbsp;
+            <SmallIconButton onClick={openImportNwbWindow} title="Import NWB" icon={<Download />} label="Import NWB" fontSize={24} />
+                &nbsp;&nbsp;
+                <SmallIconButton onClick={openNewFileWindow} title="Create a new file" icon={<NoteAdd />} label="Create file" fontSize={24} />
+                &nbsp;&nbsp;
                 <SmallIconButton onClick={refreshFiles} title="Refresh files" icon={<Refresh />} fontSize={24} />
             </div>
             <ProjectFileBrowser2
@@ -175,6 +180,14 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
                 onClose={closeNewFileWindow}
             >
                 <NewFileWindow
+                    onCreateFile={handleCreateFile}
+                />
+            </ModalWindow>
+            <ModalWindow
+                open={importNwbWindowVisible}
+                onClose={closeImportNwbWindow}
+            >
+                <ImportNwbWindow
                     onCreateFile={handleCreateFile}
                 />
             </ModalWindow>

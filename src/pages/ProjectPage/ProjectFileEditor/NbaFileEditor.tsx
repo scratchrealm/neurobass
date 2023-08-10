@@ -15,14 +15,10 @@ type Props = {
 }
 
 type Nba = {
-    nwb?: string
-    data?: string
+    nbaType: 'mountainsort5'
+    recording_nwb_file?: string
     options?: {
-        iter_sampling?: number
-        iter_warmup?: number
-        save_warmup?: boolean
-        chains?: number
-        seed?: number
+        recording_electrical_series_path?: string
     }
     required_resources?: {
         num_cpus: number
@@ -36,19 +32,18 @@ const options: {
     label: string
     type: 'number' | 'boolean' | 'string'
     required: boolean
+    readOnly?: boolean
     resources?: boolean
 }[] = [
-    {key: 'iter_sampling', label: 'iter_sampling', type: 'number', required: true},
-    {key: 'iter_warmup', label: 'iter_warmup', type: 'number', required: true},
-    {key: 'save_warmup', label: 'save_warmup', type: 'boolean', required: true},
-    {key: 'chains', label: 'chains', type: 'number', required: true},
-    {key: 'seed', label: 'seed', type: 'number', required: false},
+    {key: 'nba_type', label: 'Analysis type', type: 'string', required: true, readOnly: true},
+    {key: 'recording_nwb_file', label: 'NWB file', type: 'string', required: true},
+    {key: 'recording_electrical_series_path', label: 'Elec. series path', type: 'string', required: true},
     {key: 'num_cpus', label: 'num. CPUs', type: 'number', required: true, resources: true},
     {key: 'ram_gb', label: 'RAM (GB)', type: 'number', required: true, resources: true},
     {key: 'timeout_sec', label: 'timeout (sec)', type: 'number', required: true, resources: true}
 ]
 
-const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText, readOnly, outputFileName}) => {
+const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText, readOnly}) => {
     const {openTab, fileHasBeenEdited} = useProject()
     const [editText, setEditText] = useState<string | undefined>(undefined)
     useEffect(() => {
@@ -58,11 +53,11 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
     const nba: Nba | undefined = useMemo(() => {
         if (editText === undefined) return undefined
         try {
-            return yaml.load(editText) || {} as Nba
+            return (yaml.load(editText) || {nbaType: 'mountainsort5'}) as Nba
         } catch (e) {
             console.warn(editText)
             console.warn('Error parsing nba yaml')
-            return {} as Nba
+            return {nbaType: 'mountainsort5'} as Nba
         }
     }, [editText])
 
@@ -84,8 +79,7 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
         editText !== text
     ), [editText, text])
 
-    const nwbFileEdited = useMemo(() => (fileHasBeenEdited(nba?.nwb || '')), [nba?.nwb, fileHasBeenEdited])
-    const dataFileEdited = useMemo(() => (fileHasBeenEdited(nba?.data || '')), [nba?.data, fileHasBeenEdited])
+    const recordingNwbFileEdited = useMemo(() => (fileHasBeenEdited(nba?.recording_nwb_file || '')), [nba?.recording_nwb_file, fileHasBeenEdited])
 
     if (nba === undefined) {
         return (
@@ -122,68 +116,37 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
                 <hr />
                 <table className="table1" style={{maxWidth: 400}}>
                     <tbody>
-                        <tr>
-                            <td>NWB file</td>
-                            <td>
-                                {
-                                    editing ? (
-                                        <NwbFileSelector value={nba.nwb} onChange={nwb => setEditText(yaml.dump({...nba, nwb}))} />
-                                    ) : (
-                                        <span>
-                                            <Hyperlink onClick={() => nba.nwb && openTab(`file:${nba.nwb}`)}>{nba.nwb || ''}</Hyperlink>
-                                            {
-                                                nwbFileEdited && <span style={{color: 'red'}}> (edited)</span>
-                                            }
-                                        </span>
-                                    )
-                                }
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Data file</td>
-                            <td>
-                                {
-                                    editing ? (
-                                        <DataFileSelector value={nba.data} onChange={data => setEditText(yaml.dump({...nba, data}))} />
-                                    ) : (
-                                        <span>
-                                            <Hyperlink onClick={() => nba.data && openTab(`file:${nba.data}`)}>{nba.data || ''}</Hyperlink>
-                                            {
-                                                dataFileEdited && <span style={{color: 'red'}}> (edited)</span>
-                                            }
-                                        </span>
-                                    )
-                                }
-                            </td>
-                        </tr>
-                        {
-                            !editing && (
-                                <tr>
-                                    <td>Output file</td>
-                                    <td>
-                                        <Hyperlink onClick={() => {outputFileName && openTab(`file:${outputFileName}`)}}>{outputFileName || ''}</Hyperlink>
-                                    </td>
-                                </tr>
-                            )
-                        }
                         {
                             options.filter(o => !o.resources).map(option => (
                                 <tr key={option.key}>
                                     <td>{option.label}</td>
                                     <td>
                                         {
-                                            editing ? (
-                                                <OptionInput
-                                                    value={(nba.options as any)?.[option.key]}
-                                                    type={option.type}
-                                                    required={option.required}
-                                                    onChange={value => setEditText(yaml.dump({...nba, options: {...nba.options, [option.key]: value}}))}
-                                                />
+                                            option.key === 'recording_nwb_file' ? (
+                                                editing ? (
+                                                    <NwbFileSelector value={nba.recording_nwb_file} onChange={recording_nwb_file => setEditText(yaml.dump({...nba, recording_nwb_file}))} />
+                                                ) : (
+                                                    <span>
+                                                        <Hyperlink onClick={() => nba.recording_nwb_file && openTab(`file:${nba.recording_nwb_file}`)}>{nba.recording_nwb_file || ''}</Hyperlink>
+                                                        {
+                                                            recordingNwbFileEdited && <span style={{color: 'red'}}> (edited)</span>
+                                                        }
+                                                    </span>
+                                                )
                                             ) : (
-                                                <OptionDisplay
-                                                    value={(nba.options as any)?.[option.key]}
-                                                    type={option.type}
-                                                />
+                                                editing ? (
+                                                    <OptionInput
+                                                        value={(nba as any)[option.key]}
+                                                        type={option.type}
+                                                        required={option.required}
+                                                        onChange={value => setEditText(yaml.dump({...nba, options: {...nba.options, [option.key]: value}}))}
+                                                    />
+                                                ) : (
+                                                    <OptionDisplay
+                                                        value={(nba as any)[option.key]}
+                                                        type={option.type}
+                                                    />
+                                                )
                                             )
                                         }
                                     </td>
@@ -243,23 +206,6 @@ const NwbFileSelector: FunctionComponent<{value?: string, onChange: (value: stri
     )
 }
 
-const DataFileSelector: FunctionComponent<{value?: string, onChange: (value: string) => void}> = ({value, onChange}) => {
-    const {projectFiles} = useProject()
-    const nwbFiles = useMemo(() => (
-        (projectFiles || []).filter(f => f.fileName.endsWith('.json'))
-    ), [projectFiles])
-    return (
-        <select value={value} onChange={e => onChange(e.target.value)}>
-            <option value="">Select a data file</option>
-            {
-                nwbFiles.map(f => (
-                    <option key={f.fileName} value={f.fileName}>{f.fileName}</option>
-                ))
-            }
-        </select>
-    )
-}
-
 const OptionInput: FunctionComponent<{value?: string | number | boolean, type: 'string' | 'number' | 'boolean', required: boolean, onChange: (value: string | number | boolean) => void}> = ({value, type, required, onChange}) => {
     const [editValue, setEditValue] = useState<string>()
     useEffect(() => {
@@ -270,7 +216,7 @@ const OptionInput: FunctionComponent<{value?: string | number | boolean, type: '
             setEditValue(value ? 'true' : 'false')
         }
         else if (type === 'string') {
-            setEditValue(value + '')
+            setEditValue((value || '') + '')
         }
     }, [value, type])
     useEffect(() => {

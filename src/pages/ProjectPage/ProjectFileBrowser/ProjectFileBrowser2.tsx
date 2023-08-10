@@ -40,7 +40,15 @@ const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile
                 timestampModified: x.timestampModified
             })
         }
-        ret.sort((a, b) => (a.name.localeCompare(b.name)))
+        ret.sort((a, b) => {
+            if ((a.name.endsWith('.nwb')) && (!b.name.endsWith('.nwb'))) {
+                return 1
+            }
+            else if ((!a.name.endsWith('.nwb')) && (b.name.endsWith('.nwb'))) {
+                return -1
+            }
+            return a.name.localeCompare(b.name)
+        })
         return ret
     }, [projectFiles, currentTabName])
 
@@ -113,8 +121,11 @@ export const FileIcon: FunctionComponent<{fileName: string}> = ({fileName}) => {
         // return <FontAwesomeIcon icon={faFile as any} style={{color: 'darkorange'}} />
         return <img src="/neurobass-logo.png" alt="logo" height={14} style={{paddingBottom: 0, cursor: 'pointer'}} />
     }
-    else if (ext === 'spa') {
+    else if (ext === 'nba') {
         return <FontAwesomeIcon icon={faFile as any} style={{color: 'darkorange'}} />
+    }
+    else if (ext === 'nwb') {
+        return <FontAwesomeIcon icon={faFile as any} style={{color: 'red'}} />
     }
     else {
         return <FontAwesomeIcon icon={faFile as any} style={{color: 'gray'}} />

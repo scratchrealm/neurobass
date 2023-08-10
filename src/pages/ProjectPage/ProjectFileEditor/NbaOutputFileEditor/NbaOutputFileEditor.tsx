@@ -31,7 +31,7 @@ const NbaOutputFileEditor: FunctionComponent<Props> = ({fileName, fileContent, w
             return JSON.parse(fileContent) as NbaOutput
         }
         catch (e) {
-            console.warn(`Problem parsing spa output file ${fileName}`)
+            console.warn(`Problem parsing nba output file ${fileName}`)
             return undefined
         }
     }, [fileContent, fileName])

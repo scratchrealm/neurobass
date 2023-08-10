@@ -2,7 +2,7 @@
 
 Neurobass is a prototype of a web application for managing and running neuroscience analyses.
 
-:warning: This software is just a prototype and is not ready for production use.
+:warning: This software is a prototype and is not ready for production use.
 
 * [Live site](https://neurobass.vercel.app)
 * [About](https://neurobass.vercel.app/about)

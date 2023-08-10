@@ -6,6 +6,7 @@ import ScriptFileEditor from "./ScriptFileEditor";
 import NbaOutputFileEditor from "./NbaOutputFileEditor/NbaOutputFileEditor";
 import StanFileEditor from "./StanFileEditor";
 import TextFileEditor from "./TextFileEditor";
+import NwbFileEditor from "./NwbFileEditor";
 
 type Props = {
     fileName: string
@@ -74,6 +75,20 @@ const ProjectFileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileCo
     else if (fileName.endsWith('.py') || fileName.endsWith('.nba')) {
         return (
             <ScriptFileEditor
+                fileName={fileName}
+                fileContent={fileContent || ''}
+                onSaveContent={handleSaveContent}
+                editedFileContent={editedFileContent || ''}
+                setEditedFileContent={setEditedFileContent}
+                readOnly={readOnly}
+                width={width}
+                height={height}
+            />
+        )
+    }
+    else if (fileName.endsWith('.nwb')) {
+        return (
+            <NwbFileEditor
                 fileName={fileName}
                 fileContent={fileContent || ''}
                 onSaveContent={handleSaveContent}

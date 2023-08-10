@@ -2,23 +2,14 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
-import ChainFile from './ChainFile';
+import {exec} from 'child_process'
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
 import { ComputeResourceConfig } from './ScriptJobExecutor';
 import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
 import { SPProjectFile, SPScriptJob } from "./types/neurobass-types";
 
 type NbaOutput = {
-    chains: {
-        chainId: string,
-        rawHeader: string,
-        rawFooter: string,
-        numWarmupDraws?: number,
-        sequences: {
-            [key: string]: number[]
-        },
-        variablePrefixesExcluded?: string[]
-    }[]
+    sorting_nwb_file: string
 }
 
 class ScriptJobManager {
@@ -258,8 +249,9 @@ export class RunningJob {
         fs.mkdirSync(scriptJobDir, {recursive: true})
         fs.writeFileSync(path.join(scriptJobDir, scriptFileName), scriptFileContent)
 
+        const projectFiles = await this._loadProjectFiles(this.scriptJob.projectId)
+
         if (scriptFileName.endsWith('.py')) {
-            const projectFiles = await this._loadProjectFiles(this.scriptJob.projectId)
             for (const pf of projectFiles) {
                 let includeFile = false
                 if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
@@ -283,22 +275,29 @@ export class RunningJob {
         if (scriptFileName.endsWith('.nba')) {
             const nbaFileName = scriptFileName
             const nbaFileContent = scriptFileContent
-            const spa = yaml.load(nbaFileContent)
-            const nwbFileName = spa['nwb']
-            const dataFileName = spa['data']
-            if ((!nwbFileName) || (!dataFileName)) {
-                throw new Error('Invalid SPA file')
+            const nba = yaml.load(nbaFileContent)
+            const nbaType = nba['nba_type']
+            let runPyContent: string
+            if (nbaType === 'mountainsort5') {
+                const recordingNwbFile = nba['recording_nwb_file']
+                if (!recordingNwbFile) {
+                    throw new Error('Missing recording_nwb_file')
+                }
+                const x = projectFiles.find(pf => pf.fileName === recordingNwbFile)
+                if (!x) {
+                    throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
+                }
+                const recordingNwbFileContent = await this._loadFileContent(recordingNwbFile)
+                fs.writeFileSync(path.join(scriptJobDir, recordingNwbFile), recordingNwbFileContent)
+                const recordingElectricalSeriesPath = nba['recording_electrical_series_path']
+                if (!recordingElectricalSeriesPath) {
+                    throw new Error('Missing recording_electrical_series_path')
+                }
+                runPyContent = createMountainsort5RunPyContent(nbaFileName)
             }
-            const nwbFileContent = await this._loadFileContent(nwbFileName)
-            const dataFileContent = await this._loadFileContent(dataFileName)
-            fs.writeFileSync(path.join(scriptJobDir, nwbFileName), nwbFileContent)
-            fs.writeFileSync(path.join(scriptJobDir, dataFileName), dataFileContent)
-            const parallelChains = this.jobSlot.num_cpus
-            const threadsPerChain = 1
-            const runPyContent = createRunPyContent(nbaFileName, {
-                parallelChains,
-                threadsPerChain
-            })
+            else {
+                throw new Error(`Unexpected nba type: ${nbaType}`)
+            }
             fs.writeFileSync(path.join(scriptJobDir, 'run.py'), runPyContent)
             const runShContent = `
 set -e # exit on error and use return code of last command as return code of script
@@ -328,7 +327,7 @@ python3 ${scriptFileName}
 
         const uploadNbaOutput = async () => {
             const NbaOutput = await loadNbaOutput(`${scriptJobDir}/output`)
-            console.info(`Uploading SPA output to ${scriptFileName}.out (${this.scriptJob.scriptJobId})`)
+            console.info(`Uploading NBA output to ${scriptFileName}.out (${this.scriptJob.scriptJobId})`)
             await this._setProjectFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
         }
 
@@ -349,7 +348,10 @@ python3 ${scriptFileName}
                 let cmd: string
                 let args: string[]
 
-                const containerMethod = this.config.computeResourceConfig.container_method
+                let containerMethod = this.config.computeResourceConfig.container_method
+                if (scriptFileName.endsWith('.nba')) {
+                    containerMethod = 'none'
+                }
 
                 const absScriptJobDir = path.resolve(scriptJobDir)
 
@@ -394,6 +396,7 @@ python3 ${scriptFileName}
                             '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU
                             '--memory', `${this.jobSlot.ram_gb}g`, // limit memory
                             'magland/neurobass-default',
+                            'bash',
                             '-c', `bash run.sh` // tricky - need to put the last two args together so that it ends up in a quoted argument
                         ]]
                     }
@@ -402,6 +405,7 @@ python3 ${scriptFileName}
                             '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU
                             '--memory', `${this.jobSlot.ram_gb}g`, // limit memory
                             'magland/neurobass-default',
+                            'bash',
                             '-c', 'bash run.sh' // tricky - need to put the last two args together so that it ends up in a quoted argument
                         ]]
                     }
@@ -525,92 +529,192 @@ python3 ${scriptFileName}
     }
 }
 
-const createRunPyContent = (nbaFileName: string, o: {parallelChains: number, threadsPerChain: number}): string => {
+const createMountainsort5RunPyContent = (nbaFileName: string): string => {
     return `import yaml
+from typing import Union, List
 import time
 import json
-from cmdstanpy import CmdStanModel
+import numpy as np
+import mountainsort5 as ms5
+import h5py
+import pynwb
+from uuid import uuid4
+from pynwb.misc import Units
+import remfile
+import spikeinterface as si
+import spikeinterface.preprocessing as spre
 
-with open('${nbaFileName}', 'r') as f:
-    spa = yaml.safe_load(f)
 
-stan_file_name = spa['stan']
-data_file_name = spa['data']
-options = spa['options']
+def main():
+    with open('${nbaFileName}', 'r') as f:
+        nba = yaml.safe_load(f)
 
-model = CmdStanModel(stan_file=stan_file_name)
-with open(data_file_name, 'r') as f:
-    data = json.load(f)
+    recording_nwb_file_name = nba['recording_nwb_file']
+    recording_electrical_series_path = nba['recording_electrical_series_path']
 
-iter_sampling = options.get('iter_sampling', None)
-iter_warmup = options.get('iter_warmup', None)
-chains = options.get('chains', 4)
-save_warmup = options.get('save_warmup', True)
-seed = options.get('seed', None)
-parallel_chains = ${o.parallelChains}
-threads_per_chain = ${o.threadsPerChain}
+    # get the nwb url
+    with open(recording_nwb_file_name, 'r') as f:
+        nwb_url = json.load(f)['url']
 
-if iter_sampling is None:
-    raise Exception('iter_sampling not specified in options')
-if iter_warmup is None:
-    raise Exception('iter_warmup not specified in options')
+    # open the remote file
+    disk_cache = remfile.DiskCache('/tmp/remfile_cache')
+    remf = remfile.File(nwb_url, disk_cache=disk_cache)
+    f = h5py.File(remf, 'r')
 
-print('Starting sampling')
-print(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}')
-print(f'====================')
-timer = time.time()
-fit = model.sample(
-    data=data,
-    output_dir='output',
-    iter_sampling=iter_sampling,
-    iter_warmup=iter_warmup,
-    chains=chains,
-    seed=seed,
-    save_warmup=save_warmup,
-    show_console=True,
-    parallel_chains=parallel_chains,
-    threads_per_chain=threads_per_chain
-)
-print(f'====================')
-elapsed = time.time() - timer
-print(f'Elapsed time: {elapsed} seconds')
-print('Finished sampling')
+    recording = NwbRecording(
+        file=f,
+        electrical_series_path=recording_electrical_series_path
+    )
+
+    # Make sure the recording is preprocessed appropriately
+    # lazy preprocessing
+    recording_filtered = spre.bandpass_filter(recording, freq_min=300, freq_max=6000)
+    recording_preprocessed: si.BaseRecording = spre.whiten(recording_filtered, dtype='float32')
+
+    sorting_params = ms5.Scheme2SortingParameters(
+        phase1_detect_channel_radius=50,
+        detect_channel_radius=50
+    )
+    sorting = ms5.sorting_scheme2(
+        recording=recording_preprocessed,
+        sorting_parameters=sorting_params
+    )
+
+    with pynwb.NWBHDF5IO(file=h5py.File(remf, 'r'), mode='r') as io:
+        nwbfile_rec = io.read()
+
+        nwbfile = pynwb.NWBFile(
+            session_description=nwbfile_rec.session_description,
+            identifier=str(uuid4()),
+            session_start_time=nwbfile_rec.session_start_time,
+            experimenter=nwbfile_rec.experimenter,
+            experiment_description=nwbfile_rec.experiment_description,
+            lab=nwbfile_rec.lab,
+            institution=nwbfile_rec.institution,
+            subject=pynwb.file.Subject(
+                subject_id=nwbfile_rec.subject.subject_id,
+                age=nwbfile_rec.subject.age,
+                date_of_birth=nwbfile_rec.subject.date_of_birth,
+                sex=nwbfile_rec.subject.sex,
+                species=nwbfile_rec.subject.species,
+                description=nwbfile_rec.subject.description
+            ),
+            session_id=nwbfile_rec.session_id,
+            keywords=nwbfile_rec.keywords
+        )
+
+        for unit_id in sorting.get_unit_ids():
+            st = sorting.get_unit_spike_train(unit_id) / sorting.get_sampling_frequency()
+            nwbfile.add_unit(
+                id=unit_id,
+                spike_times=st
+            )
+        
+        if not os.path.exists('output'):
+            os.mkdir('output')
+        sorting_fname = 'output/sorting.nwb'
+
+        # Write the nwb file
+        with pynwb.NWBHDF5IO(sorting_fname, 'w') as io:
+            io.write(nwbfile, cache_spec=True)
+
+
+class NwbRecording(si.BaseRecording):
+    def __init__(self,
+        file: h5py.File,
+        electrical_series_path: str
+    ) -> None:
+        electrical_series = file[electrical_series_path]
+        electrical_series_data = electrical_series['data']
+        dtype = electrical_series_data.dtype
+
+        # Get sampling frequency
+        if 'starting_time' in electrical_series.keys():
+            t_start = electrical_series['starting_time'][()]
+            sampling_frequency = electrical_series['starting_time'].attrs['rate']
+        elif 'timestamps' in electrical_series.keys():
+            t_start = electrical_series['timestamps'][0]
+            sampling_frequency = 1 / np.median(np.diff(electrical_series['timestamps'][:1000]))
+        
+        # Get channel ids
+        electrode_indices = electrical_series['electrodes'][:]
+        electrodes_table = file['/general/extracellular_ephys/electrodes']
+        channel_ids = [electrodes_table['id'][i] for i in electrode_indices]
+        
+        si.BaseRecording.__init__(self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype)
+        
+        # Set electrode locations
+        if 'x' in electrodes_table:
+            channel_loc_x = [electrodes_table['x'][i] for i in electrode_indices]
+            channel_loc_y = [electrodes_table['y'][i] for i in electrode_indices]
+            if 'z' in electrodes_table:
+                channel_loc_z = [electrodes_table['z'][i] for i in electrode_indices]
+            else:
+                channel_loc_z = None
+        elif 'rel_x' in electrodes_table:
+            channel_loc_x = [electrodes_table['rel_x'][i] for i in electrode_indices]
+            channel_loc_y = [electrodes_table['rel_y'][i] for i in electrode_indices]
+            if 'rel_z' in electrodes_table:
+                channel_loc_z = [electrodes_table['rel_z'][i] for i in electrode_indices]
+            else:
+                channel_loc_z = None
+        else:
+            channel_loc_x = None
+            channel_loc_y = None
+            channel_loc_z = None
+        if channel_loc_x is not None:
+            ndim = 2 if channel_loc_z is None else 3
+            locations = np.zeros((len(electrode_indices), ndim), dtype=float)
+            for i, electrode_index in enumerate(electrode_indices):
+                locations[i, 0] = channel_loc_x[electrode_index]
+                locations[i, 1] = channel_loc_y[electrode_index]
+                if channel_loc_z is not None:
+                    locations[i, 2] = channel_loc_z[electrode_index]
+            self.set_dummy_probe_from_locations(locations)
+
+        recording_segment = NwbRecordingSegment(
+            electrical_series_data=electrical_series_data,
+            sampling_frequency=sampling_frequency
+        )
+        self.add_recording_segment(recording_segment)
+
+class NwbRecordingSegment(si.BaseRecordingSegment):
+    def __init__(self, electrical_series_data: h5py.Dataset, sampling_frequency: float) -> None:
+        self._electrical_series_data = electrical_series_data
+        si.BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency)
+
+    def get_num_samples(self) -> int:
+        return self._electrical_series_data.shape[0]
+
+    def get_traces(self, start_frame: int, end_frame: int, channel_indices: Union[List[int], None]=None) -> np.ndarray:
+        if channel_indices is None:
+            return self._electrical_series_data[start_frame:end_frame, :]
+        else:
+            return self._electrical_series_data[start_frame:end_frame, channel_indices]
+
+if __name__ == '__main__':
+    main()
 `
 }
 
 const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {
-    // find the .csv files in the output directory
-    const csvFiles: string[] = []
-    const files = fs.readdirSync(outputDir)
-    for (const file of files) {
-        if (file.endsWith('.csv')) {
-            csvFiles.push(file)
-        }
+    const cmd = `kachery-cloud-store ${outputDir}/sorting.nwb`
+    const output = await runCommand(cmd)
+    return {
+        sorting_nwb_file: output.stdout.trim()
     }
+}
 
-    const ret: NbaOutput = {
-        chains: []
-    }
-
-    for (const csvFile of csvFiles) {
-        const chainId = csvFile.replace('.csv', '')
-        const cf = new ChainFile(path.join(outputDir, csvFile), chainId)
-        await cf.update()
-        const sequences: {[key: string]: number[]} = {}
-        for (const vname of cf.variableNames) {
-            sequences[vname] = cf.sequenceData(vname, 0)
-        }
-        ret.chains.push({
-            chainId,
-            rawHeader: cf.rawHeader || '',
-            rawFooter: cf.rawFooter,
-            numWarmupDraws: cf.excludedInitialIterationCount,
-            sequences,
-            variablePrefixesExcluded: cf.variablePrefixesExcluded
+const runCommand = async (cmd: string): Promise<{stdout: string, stderr: string}> => {
+    return new Promise<{stdout: string, stderr: string}>((resolve, reject) => {
+        exec(cmd, (err, stdout, stderr) => {
+            if (err) {
+                reject(err)
+                return
+            }
+            resolve({stdout, stderr})
         })
-    }
-
-    return ret
+    })
 }
 
 const removeOccupiedJobSlots = (jobSlots: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[], runningJobs: RunningJob[]): {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[] => {

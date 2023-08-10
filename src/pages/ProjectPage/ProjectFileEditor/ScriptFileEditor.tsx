@@ -19,7 +19,7 @@ type Props = {
 const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveContent, editedFileContent, setEditedFileContent, readOnly, width, height}) => {
     const fileType = fileName.split('.').pop()
     const {projectFiles} = useProject()
-    const outputFileName = fileType === 'spa' ? projectFiles?.find(f => (f.fileName === `${fileName}.out`))?.fileName : undefined
+    const outputFileName = fileType === 'nba' ? projectFiles?.find(f => (f.fileName === `${fileName}.out`))?.fileName : undefined
     return (
         <Splitter
             width={width}
@@ -34,7 +34,7 @@ const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSa
                         height={0}
                         language={
                             fileType === 'py' ? 'python' :
-                            fileType === 'spa' ? 'yaml' :
+                            fileType === 'nba' ? 'yaml' :
                             'text'
                         }
                         label={fileName}

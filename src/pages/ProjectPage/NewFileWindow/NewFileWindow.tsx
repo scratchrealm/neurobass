@@ -5,19 +5,16 @@ type Props = {
     onCreateFile: (fileName: string, fileContent: string) => void
 }
 
-const defaultSpaYaml = `
-options:
-    iter_sampling: 500
-    iter_warmup: 500
-    save_warmup: True
-    chains: 4
-    seed: 0`
+const defaultNbaYaml = `
+nba_type: 'mountainsort5'
+recording_nwb_file: ""
+recording_electrical_series_path: "/acquisition/ElectricalSeries"
+`
 
 const options = [
-    {name: 'nwb', extension: '.nwb', label: 'Nwb file', defaultFileName: 'file.nwb', defaultText: '{}'},
     {name: 'dataset', extension: '.json', label: 'Dataset', defaultFileName: 'data.json', defaultText: '{}'},
     {name: 'python-script', extension: '.py', label: 'Python script', defaultFileName: 'data.py', defaultText: ''},
-    {name: 'spa', extension: '.nba', label: 'Analysis', defaultFileName: 'main.nba', defaultText: defaultSpaYaml},
+    {name: 'nba', extension: '.nba', label: 'Analysis', defaultFileName: 'main.nba', defaultText: defaultNbaYaml},
     {name: 'markdown', extension: '.md', label: 'Markdown document', defaultFileName: 'description.md', defaultText: ''},
     {name: 'text', extension: '', label: 'Empty text file', defaultFileName: 'file.txt', defaultText: ''}
 ]

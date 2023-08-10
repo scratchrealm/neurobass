@@ -6,7 +6,7 @@ type Props = {
 }
 
 const ChainsTable: FunctionComponent<Props> = ({NbaOutput}) => {
-    if (!NbaOutput) return <div>No spa output</div>
+    if (!NbaOutput) return <div>No nba output</div>
     return (
         <table className="scientific-table" style={{maxWidth: 800}}>
             <thead>

@@ -1,8 +1,5 @@
 import { FunctionComponent, useMemo } from "react";
 import Hyperlink from "../../../../components/Hyperlink";
-import { useProject } from "../../ProjectPageContext";
-import ChainsTable from "./ChainsTable";
-import ExportComponent from "./ExportComponent";
 
 type Props = {
     fileName: string
@@ -12,16 +9,7 @@ type Props = {
 }
 
 export type NbaOutput = {
-    chains: {
-        chainId: string,
-        rawHeader: string,
-        rawFooter: string,
-        numWarmupDraws?: number,
-        sequences: {
-            [key: string]: number[]
-        },
-        variablePrefixesExcluded?: string[]
-    }[]
+    sorting_nwb_file: string
 }
 
 const NbaOutputFileEditor: FunctionComponent<Props> = ({fileName, fileContent, width, height}) => {
@@ -36,19 +24,34 @@ const NbaOutputFileEditor: FunctionComponent<Props> = ({fileName, fileContent, w
         }
     }, [fileContent, fileName])
 
-    const {projectId} = useProject()
-    const mcmcMonitorUrl = `https://flatironinstitute.github.io/mcmc-monitor?s=spa#/spa/${projectId}/${fileName}`
-    // const mcmcMonitorUrl = `http://localhost:5173/mcmc-monitor?s=spa#/spa/${projectId}/${fileName}`
+    const handleOpenInNeurosift = () => {
+        const url = NbaOutput?.sorting_nwb_file.split('?')[0]
+        if (!url) return
+        const u = `https://flatironinstitute.github.io/neurosift/?p=/nwb&url=${url}`
+        window.open(u, '_blank')
+    }
 
     return (
         <div style={{position: 'absolute', width, height, background: 'white'}}>
             <div style={{padding: 10}}>
                 <h3>{fileName}</h3>
-                <div><Hyperlink href={mcmcMonitorUrl} target="_blank">View in MCMC Monitor</Hyperlink></div>
-                <hr />
-                <ChainsTable NbaOutput={NbaOutput} />
-                <hr />
-                <ExportComponent NbaOutput={NbaOutput} /> 
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>Sorting output:</td>
+                            <td>{NbaOutput?.sorting_nwb_file}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style={{padding: 10}}>
+                {
+                    NbaOutput?.sorting_nwb_file && (
+                        <Hyperlink onClick={handleOpenInNeurosift}>
+                            Open in Neurosift
+                        </Hyperlink>
+                    )
+                }
             </div>
         </div>
     )

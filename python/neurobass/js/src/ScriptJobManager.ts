@@ -2,11 +2,10 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
-import {exec} from 'child_process'
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
 import { ComputeResourceConfig } from './ScriptJobExecutor';
-import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
 import { SPProjectFile, SPScriptJob } from "./types/neurobass-types";
+import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
 
 type NbaOutput = {
     sorting_nwb_file: string
@@ -545,6 +544,21 @@ import remfile
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 
+import boto3
+import botocore
+
+CLOUDFLARE_ACCOUNT_ID = os.environ['CLOUDFLARE_ACCOUNT_ID']
+CLOUDFLARE_AWS_ACCESS_KEY_ID = os.environ['CLOUDFLARE_AWS_ACCESS_KEY_ID']
+CLOUDFLARE_AWS_SECRET_ACCESS_KEY = os.environ['CLOUDFLARE_AWS_SECRET_ACCESS_KEY']
+CLOUDFLARE_BUCKET = os.environ['CLOUDFLARE_BUCKET']
+CLOUDFLARE_BUCKET_BASE_URL = os.environ['CLOUDFLARE_BUCKET_BASE_URL']
+
+s3 = boto3.client('s3',
+  endpoint_url = f'https://{CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com',
+  aws_access_key_id = CLOUDFLARE_AWS_ACCESS_KEY_ID,
+  aws_secret_access_key = CLOUDFLARE_AWS_SECRET_ACCESS_KEY
+)
+
 
 def main():
     with open('${nbaFileName}', 'r') as f:
@@ -618,7 +632,17 @@ def main():
         # Write the nwb file
         with pynwb.NWBHDF5IO(sorting_fname, 'w') as io:
             io.write(nwbfile, cache_spec=True)
+        
+        random_output_id = str(uuid4())[0:8]
 
+        s3.upload_file(sorting_fname, CLOUDFLARE_BUCKET, f'neurobass-dev/{random_output_id}.nwb')
+        # for now we hard-code neurosift.org
+        url = f'{CLOUDFLARE_BUCKET_BASE_URL}/neurobass-dev/{random_output_id}.nwb'
+        out = {
+            'sorting_nwb_file': url
+        }
+        with open('output/out.json', 'w') as f:
+            json.dump(out, f)
 
 class NwbRecording(si.BaseRecording):
     def __init__(self,
@@ -699,24 +723,21 @@ if __name__ == '__main__':
 }
 
 const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {
-    const cmd = `kachery-cloud-store ${outputDir}/sorting.nwb`
-    const output = await runCommand(cmd)
-    return {
-        sorting_nwb_file: output.stdout.trim()
-    }
+    const output = await fs.promises.readFile(path.join(outputDir, 'out.json'), {encoding: 'utf8'})
+    return JSON.parse(output)
 }
 
-const runCommand = async (cmd: string): Promise<{stdout: string, stderr: string}> => {
-    return new Promise<{stdout: string, stderr: string}>((resolve, reject) => {
-        exec(cmd, (err, stdout, stderr) => {
-            if (err) {
-                reject(err)
-                return
-            }
-            resolve({stdout, stderr})
-        })
-    })
-}
+// const runCommand = async (cmd: string): Promise<{stdout: string, stderr: string}> => {
+//     return new Promise<{stdout: string, stderr: string}>((resolve, reject) => {
+//         exec(cmd, (err, stdout, stderr) => {
+//             if (err) {
+//                 reject(err)
+//                 return
+//             }
+//             resolve({stdout, stderr})
+//         })
+//     })
+// }
 
 const removeOccupiedJobSlots = (jobSlots: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[], runningJobs: RunningJob[]): {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[] => {
     const ret: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[] = []

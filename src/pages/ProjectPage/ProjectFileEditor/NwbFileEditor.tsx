@@ -26,7 +26,7 @@ const NwbFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveC
         catch {
             return {}
         }
-    }, [])
+    }, [fileContent])
 
     const nwbUrl = content.url || ''
 

@@ -25,7 +25,7 @@ const NbaOutputFileEditor: FunctionComponent<Props> = ({fileName, fileContent, w
     }, [fileContent, fileName])
 
     const handleOpenInNeurosift = () => {
-        const url = NbaOutput?.sorting_nwb_file.split('?')[0]
+        const url = NbaOutput?.sorting_nwb_file
         if (!url) return
         const u = `https://flatironinstitute.github.io/neurosift/?p=/nwb&url=${url}`
         window.open(u, '_blank')

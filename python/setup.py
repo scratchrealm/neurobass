@@ -61,7 +61,8 @@ setup(
         'click',
         'simplejson',
         'numpy',
-        'PyYAML'
+        'PyYAML',
+        'remfile'
     ],
     cmdclass={
         'install': NpmInstallCommand,

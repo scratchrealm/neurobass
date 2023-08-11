@@ -3,14 +3,13 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
-import { ComputeResourceConfig } from './ScriptJobExecutor';
 import { SPProjectFile, SPScriptJob } from "./types/neurobass-types";
 import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
 
 
 export const getPresetConfig = () => {
     // hard-code this as flatiron for now
-    return process.env.NEUROBASS_PRESET_CONFIG || 'flatiron'
+    return process.env.PRESET_CONFIG || 'flatiron'
 }
 const presetConfig = getPresetConfig()
 
@@ -18,9 +17,11 @@ type NbaOutput = {
     sorting_nwb_file: string
 }
 
+const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
+
 class ScriptJobManager {
     #runningJobs: RunningJob[] = []
-    constructor(private config: {dir: string, computeResourceConfig: ComputeResourceConfig, onScriptJobCompletedOrFailed: (job: RunningJob) => void}) {
+    constructor(private config: {dir: string, onScriptJobCompletedOrFailed: (job: RunningJob) => void}) {
 
     }
     async initiateJob(job: SPScriptJob): Promise<boolean> {
@@ -29,13 +30,10 @@ class ScriptJobManager {
             return false
         }
 
-        const {job_slots} = this.config.computeResourceConfig
-        const job_slots2 = removeOccupiedJobSlots(job_slots, this.#runningJobs)
-        const availableJobSlot = getAvailableJobSlot(job_slots2, job)
-        if (!availableJobSlot) {
+        if (this.#runningJobs.length >= numSimultaneousJobs) {
             return false
         }
-        const a = new RunningJob(job, this.config, availableJobSlot)
+        const a = new RunningJob(job)
         const okay = await a.initiate()
         if (okay) {
             this._addRunningJob(a)
@@ -114,7 +112,7 @@ export class RunningJob {
     #onCompletedOrFailedCallbacks: (() => void)[] = []
     #childProcess: ChildProcessWithoutNullStreams | null = null
     #status: 'pending' | 'running' | 'completed' | 'failed' = 'pending'
-    constructor(public scriptJob: SPScriptJob, private config: {dir: string, computeResourceConfig: ComputeResourceConfig}, private jobSlot: {num_cpus: number, ram_gb: number, timeout_sec: number}) {
+    constructor(public scriptJob: SPScriptJob) {
     }
     async initiate(): Promise<boolean> {
         console.info(`Initiating script job: ${this.scriptJob.scriptJobId} - ${this.scriptJob.scriptFileName}`)
@@ -158,8 +156,8 @@ export class RunningJob {
             scriptJobId: this.scriptJob.scriptJobId,
             property,
             value,
-            computeResourceNodeId: this.config.computeResourceConfig.node_id,
-            computeResourceNodeName: this.config.computeResourceConfig.node_name
+            computeResourceNodeId: process.env.COMPUTE_RESOURCE_NODE_ID,
+            computeResourceNodeName: process.env.COMPUTE_RESOURCE_NODE_NAME || ''
         }
         const resp = await this._postNeurobassRequest(req)
         if (!resp) {
@@ -173,8 +171,8 @@ export class RunningJob {
     }
     private async _postNeurobassRequest(req: any): Promise<NeurobassResponse> {
         return await postNeurobassRequestFromComputeResource(req, {
-            computeResourceId: this.config.computeResourceConfig.compute_resource_id,
-            computeResourcePrivateKey: this.config.computeResourceConfig.compute_resource_private_key
+            computeResourceId: process.env.COMPUTE_RESOURCE_ID,
+            computeResourcePrivateKey: process.env.COMPUTE_RESOURCE_PRIVATE_KEY
         })
     }
     private async _loadFileContent(fileName: string): Promise<string> {
@@ -262,7 +260,7 @@ export class RunningJob {
         try {
             const scriptFileName = this.scriptJob.scriptFileName
             const scriptFileContent = await this._loadFileContent(this.scriptJob.scriptFileName)
-            const scriptJobDir = path.join(this.config.dir, 'script_jobs', this.scriptJob.scriptJobId)
+            const scriptJobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.scriptJob.scriptJobId)
             fs.mkdirSync(scriptJobDir, {recursive: true})
             fs.writeFileSync(path.join(scriptJobDir, scriptFileName), scriptFileContent)
 
@@ -430,9 +428,11 @@ export class RunningJob {
                         '-w', '/working'
                     ]
                     if (scriptFileName.endsWith('.py')) {
+                        const num_cpus = 2
+                        const ram_gb = 2
                         args = [...args, ...[
-                            '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU
-                            '--memory', `${this.jobSlot.ram_gb}g`, // limit memory
+                            '--cpus', `${num_cpus}`, // limit CPU
+                            '--memory', `${ram_gb}g`, // limit memory
                             'magland/neurobass-default',
                             'bash',
                             '-c', `bash run.sh` // tricky - need to put the last two args together so that it ends up in a quoted argument
@@ -440,8 +440,6 @@ export class RunningJob {
                     }
                     else if (scriptFileName.endsWith('.nba')) {
                         args = [...args, ...[
-                            '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU
-                            '--memory', `${this.jobSlot.ram_gb}g`, // limit memory
                             'magland/neurobass-default',
                             'bash',
                             '-c', 'bash run.sh' // tricky - need to put the last two args together so that it ends up in a quoted argument
@@ -461,7 +459,7 @@ export class RunningJob {
 
                 console.info('EXECUTING:', `${cmd} ${args.join(' ')}`)
 
-                const timeoutSec: number = this.jobSlot.timeout_sec
+                const timeoutSec = 60 * 60 * 3 // 3 hours
 
                 this.#childProcess = spawn(cmd, args, {
                     cwd: scriptJobDir
@@ -584,52 +582,5 @@ const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {
 //         })
 //     })
 // }
-
-const removeOccupiedJobSlots = (jobSlots: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[], runningJobs: RunningJob[]): {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[] => {
-    const ret: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[] = []
-    for (const js of jobSlots) {
-        ret.push({...js})
-    }
-    for (const job of runningJobs) {
-        for (const js of ret) {
-            if (jobFitsInJobSlot(js, job.scriptJob)) {
-                js.count -= 1
-                break
-            }
-        }
-    }
-    return ret
-}
-
-const jobFitsInJobSlot = (jobSlot: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}, job: SPScriptJob): boolean => {
-    if (jobSlot.count <= 0) {
-        return false
-    }
-    if ((job.requiredResources?.numCpus || 1) > jobSlot.num_cpus) {
-        return false
-    }
-    if ((job.requiredResources?.ramGb || 1) > jobSlot.ram_gb) {
-        return false
-    }
-    if ((job.requiredResources?.timeoutSec || 10) > jobSlot.timeout_sec) {
-        return false
-    }
-    return true
-}
-
-const getAvailableJobSlot = (jobSlots: {count: number, num_cpus: number, ram_gb: number, timeout_sec: number}[], job: SPScriptJob): {num_cpus: number, ram_gb: number, timeout_sec: number} | undefined => {
-    for (const js of jobSlots) {
-        if (js.count > 0) {
-            if (jobFitsInJobSlot(js, job)) {
-                return {
-                    num_cpus: js.num_cpus,
-                    ram_gb: js.ram_gb,
-                    timeout_sec: js.timeout_sec
-                }
-            }
-        }
-    }
-    return undefined
-}
 
 export default ScriptJobManager

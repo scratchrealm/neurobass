@@ -1,34 +1,15 @@
-import fs from 'fs'
-import path from 'path'
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource"
 import PubsubClient from './PubsubClient'
 import ScriptJobManager from "./ScriptJobManager"
-import { GetScriptJobsRequest, GetPubsubSubscriptionRequest } from "./types/NeurobassRequest"
-import yaml from 'js-yaml'
-
-export type ComputeResourceConfig = {
-    compute_resource_id: string
-    compute_resource_private_key: string
-    node_id: string
-    node_name: string
-    job_slots: {
-        count: number
-        num_cpus: number
-        ram_gb: number
-        timeout_sec: number
-    }[]
-}
+import { GetPubsubSubscriptionRequest, GetScriptJobsRequest } from "./types/NeurobassRequest"
 
 class ScriptJobExecutor {
     #stopped = false
     #scriptJobManager: ScriptJobManager
     #pubsubClient: PubsubClient | undefined
-    #computeResourceConfig: ComputeResourceConfig
     constructor(private a: { dir: string }) {
         // read computeResourceId from .neurobass-compute-resource-node.yaml in dir directory
-        const configYaml = fs.readFileSync(path.join(a.dir, '.neurobass-compute-resource-node.yaml'), 'utf8')
-        this.#computeResourceConfig = yaml.load(configYaml) as ComputeResourceConfig
-        const container_method = process.env.NEUROBASS_CONTAINER_METHOD || 'none'
+        const container_method = process.env.CONTAINER_METHOD || 'none'
         if (!['none', 'docker', 'singularity'].includes(container_method)) {
             throw Error(`Invalid containerMethod: ${container_method}`)
         }
@@ -40,7 +21,6 @@ class ScriptJobExecutor {
         }
         this.#scriptJobManager = new ScriptJobManager({
             dir: a.dir,
-            computeResourceConfig: this.#computeResourceConfig,
             onScriptJobCompletedOrFailed: (job) => {
                 if (job.status === 'completed') {
                     console.info(`Script job completed`)
@@ -61,7 +41,7 @@ class ScriptJobExecutor {
         const reqPubsub: GetPubsubSubscriptionRequest = {
             type: 'getPubsubSubscription',
             timestamp: Date.now() / 1000,
-            computeResourceId: this.#computeResourceConfig.compute_resource_id
+            computeResourceId: process.env.COMPUTE_RESOURCE_ID
         }
         const respPubsub = await this._postNeurobassRequest(reqPubsub)
         if (respPubsub.type !== 'getPubsubSubscription') {
@@ -104,10 +84,10 @@ class ScriptJobExecutor {
         const req: GetScriptJobsRequest = {
             type: 'getScriptJobs',
             timestamp: Date.now() / 1000,
-            computeResourceId: this.#computeResourceConfig.compute_resource_id,
+            computeResourceId: process.env.COMPUTE_RESOURCE_ID,
             status: 'pending',
-            nodeId: this.#computeResourceConfig.node_id,
-            nodeName: this.#computeResourceConfig.node_name
+            nodeId: process.env.COMPUTE_RESOURCE_NODE_ID,
+            nodeName: process.env.COMPUTE_RESOURCE_NODE_NAME
         }
         const resp = await this._postNeurobassRequest(req)
         if (resp) {
@@ -135,8 +115,8 @@ class ScriptJobExecutor {
     }
     private async _postNeurobassRequest(req: any): Promise<any> {
         return await postNeurobassRequestFromComputeResource(req, {
-            computeResourceId: this.#computeResourceConfig.compute_resource_id,
-            computeResourcePrivateKey: this.#computeResourceConfig.compute_resource_private_key
+            computeResourceId: process.env.COMPUTE_RESOURCE_ID,
+            computeResourcePrivateKey: process.env.COMPUTE_RESOURCE_PRIVATE_KEY
         })
     }
     

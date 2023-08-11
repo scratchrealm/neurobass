@@ -1,0 +1,1 @@
+docker build -t magland/neurobass-compute-resource .

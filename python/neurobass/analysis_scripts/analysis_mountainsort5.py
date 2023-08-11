@@ -13,16 +13,17 @@ import spikeinterface.preprocessing as spre
 
 import boto3
 
-CLOUDFLARE_ACCOUNT_ID = os.environ['CLOUDFLARE_ACCOUNT_ID']
-CLOUDFLARE_AWS_ACCESS_KEY_ID = os.environ['CLOUDFLARE_AWS_ACCESS_KEY_ID']
-CLOUDFLARE_AWS_SECRET_ACCESS_KEY = os.environ['CLOUDFLARE_AWS_SECRET_ACCESS_KEY']
-CLOUDFLARE_BUCKET = os.environ['CLOUDFLARE_BUCKET']
-CLOUDFLARE_BUCKET_BASE_URL = os.environ['CLOUDFLARE_BUCKET_BASE_URL']
+# https://{CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com
+OUTPUT_ENDPOINT_URL = os.environ.get('OUTPUT_ENDPOINT_URL', None)
+OUTPUT_AWS_ACCESS_KEY_ID = os.environ['OUTPUT_AWS_ACCESS_KEY_ID']
+OUTPUT_AWS_SECRET_ACCESS_KEY = os.environ['OUTPUT_AWS_SECRET_ACCESS_KEY']
+OUTPUT_BUCKET = os.environ['OUTPUT_BUCKET']
+OUTPUT_BUCKET_BASE_URL = os.environ['OUTPUT_BUCKET_BASE_URL']
 
 s3 = boto3.client('s3',
-  endpoint_url = f'https://{CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com',
-  aws_access_key_id = CLOUDFLARE_AWS_ACCESS_KEY_ID,
-  aws_secret_access_key = CLOUDFLARE_AWS_SECRET_ACCESS_KEY
+  endpoint_url = OUTPUT_ENDPOINT_URL,
+  aws_access_key_id = OUTPUT_AWS_ACCESS_KEY_ID,
+  aws_secret_access_key = OUTPUT_AWS_SECRET_ACCESS_KEY
 )
 
 
@@ -102,9 +103,9 @@ def main():
         
         random_output_id = str(uuid4())[0:8]
 
-        s3.upload_file(sorting_fname, CLOUDFLARE_BUCKET, f'neurobass-dev/{random_output_id}.nwb')
+        s3.upload_file(sorting_fname, OUTPUT_BUCKET, f'neurobass-dev/{random_output_id}.nwb')
         # for now we hard-code neurosift.org
-        url = f'{CLOUDFLARE_BUCKET_BASE_URL}/neurobass-dev/{random_output_id}.nwb'
+        url = f'{OUTPUT_BUCKET_BASE_URL}/neurobass-dev/{random_output_id}.nwb'
         out = {
             'sorting_nwb_file': url
         }

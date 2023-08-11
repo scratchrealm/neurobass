@@ -386,7 +386,7 @@ export class RunningJob {
                 let cmd: string
                 let args: string[]
 
-                let containerMethod = this.config.computeResourceConfig.container_method
+                let containerMethod = process.env.CONTAINER_METHOD || 'none'
                 if (scriptFileName.endsWith('.nba')) {
                     containerMethod = 'none'
                 }

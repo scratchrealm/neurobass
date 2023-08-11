@@ -33,7 +33,7 @@ class Daemon:
 
     def start(self):
         cmd = ["node", f'{this_directory}/js/dist/index.js', "start", "--dir", self.dir]
-        analysis_scripts_dir = Path(__file__).parent + '/analysis_scripts'
+        analysis_scripts_dir = f'{Path(__file__).parent}/analysis_scripts'
         self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,

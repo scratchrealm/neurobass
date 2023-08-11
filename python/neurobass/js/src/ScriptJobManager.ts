@@ -287,7 +287,7 @@ export class RunningJob {
                 const nba = yaml.load(nbaFileContent)
                 const nbaType = nba['nba_type']
                 let runPyContent: string
-                if (nbaType === 'mountainsort5') {
+                if ((nbaType === 'mountainsort5') || (nbaType === 'kilosort3')) {
                     const recordingNwbFile = nba['recording_nwb_file']
                     if (!recordingNwbFile) {
                         throw new Error('Missing recording_nwb_file')
@@ -302,7 +302,12 @@ export class RunningJob {
                     if (!recordingElectricalSeriesPath) {
                         throw new Error('Missing recording_electrical_series_path')
                     }
-                    runPyContent = createMountainsort5RunPyContent()
+                    if (nbaType === 'mountainsort5') {
+                        runPyContent = createMountainsort5RunPyContent()
+                    }
+                    else if (nbaType === 'kilosort3') {
+                        runPyContent = createKilosort3RunPyContent()
+                    }
                 }
                 else {
                     throw new Error(`Unexpected nba type: ${nbaType}`)
@@ -537,6 +542,13 @@ const createMountainsort5RunPyContent = (): string => {
     const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
     if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
     return fs.readFileSync(path.join(analysisScriptsDir, 'run_mountainsort5.py'), 'utf8')
+}
+
+const createKilosort3RunPyContent = (): string => {
+    // read from $ANALYSIS_SCRIPTS_DIR/run_kilosort3.py
+    const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
+    if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
+    return fs.readFileSync(path.join(analysisScriptsDir, 'run_kilosort3.py'), 'utf8')
 }
 
 const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {

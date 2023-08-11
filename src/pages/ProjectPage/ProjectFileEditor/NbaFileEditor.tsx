@@ -15,7 +15,7 @@ type Props = {
 }
 
 type Nba = {
-    nbaType: 'mountainsort5'
+    nbaType: 'mountainsort5' | 'kilosort3'
     recording_nwb_file?: string
     options?: {
         recording_electrical_series_path?: string
@@ -35,7 +35,7 @@ const options: {
     readOnly?: boolean
     resources?: boolean
 }[] = [
-    {key: 'nba_type', label: 'Analysis type', type: 'string', required: true, readOnly: true},
+    {key: 'nba_type', label: 'Analysis type', type: 'string', required: true, readOnly: false},
     {key: 'recording_nwb_file', label: 'Recording NWB file', type: 'string', required: true},
     {key: 'recording_electrical_series_path', label: 'Elec. series path', type: 'string', required: true},
     {key: 'num_cpus', label: 'num. CPUs', type: 'number', required: true, resources: true},

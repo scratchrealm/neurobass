@@ -58,9 +58,24 @@ class Daemon:
 def start_compute_resource_node(dir: str):
     config_fname = os.path.join(dir, '.neurobass-compute-resource-node.yaml')
     
-    # set default config fields
-    with open(config_fname, 'r') as f:
-        config = yaml.safe_load(f)
+    if os.path.exists(config_fname):
+        with open(config_fname, 'r') as f:
+            config = yaml.safe_load(f)
+    else:
+        compute_resource_id = os.getenv('NEUROBASS_COMPUTE_RESOURCE_ID', None)
+        compute_resource_private_key = os.getenv('NEUROBASS_COMPUTE_RESOURCE_PRIVATE_KEY', None)
+        if compute_resource_id is None:
+            raise ValueError('Compute resource has not been initialized in this directory, and the environment variable NEUROBASS_COMPUTE_RESOURCE_ID is not set.')
+        if compute_resource_private_key is None:
+            raise ValueError('Compute resource has not been initialized in this directory, and the environment variable NEUROBASS_COMPUTE_RESOURCE_PRIVATE_KEY is not set.')
+        node_id = os.getenv('NEUROBASS_COMPUTE_RESOURCE_NODE_ID', 'undefined')
+        node_name = os.getenv('NEUROBASS_COMPUTE_RESOURCE_NODE_NAME', 'undefined')
+        config = {
+            'compute_resource_id': compute_resource_id,
+            'compute_resource_private_key': compute_resource_private_key,
+            'node_id': node_id,
+            'node_name': node_name
+        }
     something_changed = False
     for k in default_config:
         if k not in config:

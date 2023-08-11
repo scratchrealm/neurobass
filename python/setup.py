@@ -60,7 +60,8 @@ setup(
     install_requires=[
         'click',
         'simplejson',
-        'numpy'
+        'numpy',
+        'PyYAML'
     ],
     cmdclass={
         'install': NpmInstallCommand,

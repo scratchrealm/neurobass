@@ -421,8 +421,18 @@ export class RunningJob {
                     }
                 }
                 else if (containerMethod === 'none') {
-                    cmd = 'bash'
-                    args = ['run.sh']
+                    if (process.env.ANALYSIS_RUN_PREFIX) {
+                        cmd = process.env.ANALYSIS_RUN_PREFIX.split(' ')[0]
+                        args = [...process.env.ANALYSIS_RUN_PREFIX.split(' ').slice(1), 'bash', 'run.sh']
+                    }
+                    else {
+                        cmd = 'bash'
+                        args = ['run.sh']
+                    }
+                    cmd = 'srun'
+                    args = [
+                        'bash', 'run.sh'
+                    ]
                 }
                 else {
                     throw Error(`Unsupported container: ${containerMethod}`)

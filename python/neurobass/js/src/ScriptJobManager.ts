@@ -437,14 +437,8 @@ export class RunningJob {
                     }
                 }
                 else if (containerMethod === 'none') {
-                    if (analysisRunPrefix) {
-                        cmd = analysisRunPrefix.split(' ')[0]
-                        args = [...analysisRunPrefix.split(' ').slice(1), 'bash', 'run.sh']
-                    }
-                    else {
-                        cmd = 'bash'
-                        args = ['run.sh']
-                    }
+                    cmd = 'bash'
+                    args = ['run.sh']
                 }
                 else {
                     throw Error(`Unsupported container: ${containerMethod}`)

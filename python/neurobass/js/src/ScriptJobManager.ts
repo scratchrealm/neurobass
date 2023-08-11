@@ -429,10 +429,6 @@ export class RunningJob {
                         cmd = 'bash'
                         args = ['run.sh']
                     }
-                    cmd = 'srun'
-                    args = [
-                        'bash', 'run.sh'
-                    ]
                 }
                 else {
                     throw Error(`Unsupported container: ${containerMethod}`)

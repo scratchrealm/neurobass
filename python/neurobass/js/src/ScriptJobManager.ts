@@ -554,17 +554,17 @@ export class RunningJob {
 }
 
 const createMountainsort5RunPyContent = (): string => {
-    // read from $ANALYSIS_SCRIPTS_DIR/run_mountainsort5.py
+    // read from $ANALYSIS_SCRIPTS_DIR/analysis_mountainsort5.py
     const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
     if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
-    return fs.readFileSync(path.join(analysisScriptsDir, 'run_mountainsort5.py'), 'utf8')
+    return fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
 }
 
 const createKilosort3RunPyContent = (): string => {
-    // read from $ANALYSIS_SCRIPTS_DIR/run_kilosort3.py
+    // read from $ANALYSIS_SCRIPTS_DIR/analysis_kilosort3.py
     const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
     if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
-    return fs.readFileSync(path.join(analysisScriptsDir, 'run_kilosort3.py'), 'utf8')
+    return fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
 }
 
 const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {

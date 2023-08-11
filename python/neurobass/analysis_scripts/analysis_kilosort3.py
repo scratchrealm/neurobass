@@ -55,7 +55,12 @@ def main():
     recording2 = _make_binary_recording(recording)
 
     # run kilosort3 in the container
-    sorting = ss.run_kilosort3(recording2, singularity_image="spikeinterface/kilosort-compiled-base:latest")
+    container_mode = os.environ['NEUROBASS_CONTAINER_MODE']
+    sorting = ss.run_kilosort3(
+        recording2,
+        singularity_image=(container_mode == 'singularity'),
+        docker_image=(container_mode == 'docker')
+    )
 
     with pynwb.NWBHDF5IO(file=h5py.File(remf, 'r'), mode='r') as io:
         nwbfile_rec = io.read()

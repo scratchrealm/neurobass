@@ -33,12 +33,14 @@ class Daemon:
 
     def start(self):
         cmd = ["node", f'{this_directory}/js/dist/index.js', "start", "--dir", self.dir]
+        analysis_scripts_dir = Path(__file__).parent + '/analysis_scripts'
         self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=1,
             universal_newlines=True,
+            env=dict(os.environ, ANALYSIS_SCRIPTS_DIR=analysis_scripts_dir)
         )
 
         self.output_thread = Thread(target=self._forward_output, daemon=True) # daemon=True means that the thread will not block the program from exiting

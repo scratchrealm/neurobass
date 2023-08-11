@@ -7,6 +7,13 @@ import { ComputeResourceConfig } from './ScriptJobExecutor';
 import { SPProjectFile, SPScriptJob } from "./types/neurobass-types";
 import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
 
+
+export const getPresetConfig = () => {
+    // hard-code this as flatiron for now
+    return process.env.NEUROBASS_PRESET_CONFIG || 'flatiron'
+}
+const presetConfig = getPresetConfig()
+
 type NbaOutput = {
     sorting_nwb_file: string
 }
@@ -21,6 +28,7 @@ class ScriptJobManager {
         if (this.#runningJobs.filter(x => x.scriptJob.scriptJobId === job.scriptJobId).length > 0) {
             return false
         }
+
         const {job_slots} = this.config.computeResourceConfig
         const job_slots2 = removeOccupiedJobSlots(job_slots, this.#runningJobs)
         const availableJobSlot = getAvailableJobSlot(job_slots2, job)
@@ -286,6 +294,14 @@ export class RunningJob {
                 const nbaFileContent = scriptFileContent
                 const nba = yaml.load(nbaFileContent)
                 const nbaType = nba['nba_type']
+
+                let analysisRunPrefix = process.env.ANALYSIS_RUN_PREFIX || ''
+                if ((!analysisRunPrefix) && (presetConfig === 'flatiron')) {
+                    if (nbaType === 'kilosort3') {
+                        analysisRunPrefix = 'srun -p gpu --gpus-per-task 1 --gpus 1 -t 0-4:00'
+                    }
+                }
+
                 let runPyContent: string
                 if ((nbaType === 'mountainsort5') || (nbaType === 'kilosort3')) {
                     const recordingNwbFile = nba['recording_nwb_file']
@@ -322,7 +338,7 @@ export class RunningJob {
     } 
     trap clean_up EXIT
     export NBA_FILE_NAME="${nbaFileName}"
-    python3 run.py
+    ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
     `
                 fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
             }
@@ -421,9 +437,9 @@ export class RunningJob {
                     }
                 }
                 else if (containerMethod === 'none') {
-                    if (process.env.ANALYSIS_RUN_PREFIX) {
-                        cmd = process.env.ANALYSIS_RUN_PREFIX.split(' ')[0]
-                        args = [...process.env.ANALYSIS_RUN_PREFIX.split(' ').slice(1), 'bash', 'run.sh']
+                    if (analysisRunPrefix) {
+                        cmd = analysisRunPrefix.split(' ')[0]
+                        args = [...analysisRunPrefix.split(' ').slice(1), 'bash', 'run.sh']
                     }
                     else {
                         cmd = 'bash'

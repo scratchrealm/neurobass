@@ -6,8 +6,7 @@ type Props = {
 }
 
 const options = [
-    {name: 'dataset', extension: '.json', label: 'Dataset', defaultFileName: 'data.json', defaultText: '{}'},
-    {name: 'python-script', extension: '.py', label: 'Python script', defaultFileName: 'data.py', defaultText: ''},
+    {name: 'python-script', extension: '.py', label: 'Python script', defaultFileName: 'test.py', defaultText: ''},
     {name: 'markdown', extension: '.md', label: 'Markdown document', defaultFileName: 'description.md', defaultText: ''},
     {name: 'text', extension: '', label: 'Empty text file', defaultFileName: 'file.txt', defaultText: ''}
 ]

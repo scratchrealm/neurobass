@@ -19,12 +19,11 @@ pip install -e .
 ```bash
 # Initialize (one time)
 export COMPUTE_RESOURCE_DIR=/some/path
+export NEUROBASS_CONTAINER_METHOD=singularity # or docker
 cd $COMPUTE_RESOURCE_DIR
 neurobass init-compute-resource-node
 # Open the provided link in a browser and log in using GitHub
 ```
-
-Edit `$COMPUTE_RESOURCE_DIR/.neurobass-compute-resource-node.yaml` and set `container_method` to `docker` or `singularity` as appropriate. By default it is set to `docker`.
 
 ```bash
 # If using docker, initialize the docker container

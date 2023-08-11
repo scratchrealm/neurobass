@@ -7,7 +7,6 @@ from .crypto_keys import sign_message, generate_keypair
 
 
 default_config = {
-    'container_method': 'docker',
     'job_slots': [
         {
             'count': 2,

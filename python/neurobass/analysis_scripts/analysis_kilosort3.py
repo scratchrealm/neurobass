@@ -59,7 +59,7 @@ def main():
     recording2 = _make_binary_recording(recording)
 
     # run kilosort3 in the container
-    container_mode = os.getenv('NEUROBASS_CONTAINER_MODE', 'singularity') # for now default to singularity
+    container_mode = os.getenv('NEUROBASS_CONTAINER_METHOD', 'singularity') # for now default to singularity
     sorting=run_kilosort3(
         recording=recording2,
         sorting_params={},

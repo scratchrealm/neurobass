@@ -59,8 +59,6 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
         }
     }, [editText])
 
-    console.log('--- nba', nba)
-
     const [editing, setEditing] = useState(false)
 
     const handleSave = useCallback(() => {

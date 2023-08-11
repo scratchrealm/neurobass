@@ -11,7 +11,6 @@ export type ComputeResourceConfig = {
     compute_resource_private_key: string
     node_id: string
     node_name: string
-    container_method: 'none' | 'docker' | 'singularity'
     job_slots: {
         count: number
         num_cpus: number
@@ -29,7 +28,7 @@ class ScriptJobExecutor {
         // read computeResourceId from .neurobass-compute-resource-node.yaml in dir directory
         const configYaml = fs.readFileSync(path.join(a.dir, '.neurobass-compute-resource-node.yaml'), 'utf8')
         this.#computeResourceConfig = yaml.load(configYaml) as ComputeResourceConfig
-        const {container_method} = this.#computeResourceConfig
+        const container_method = process.env.NEUROBASS_CONTAINER_METHOD || 'none'
         if (!['none', 'docker', 'singularity'].includes(container_method)) {
             throw Error(`Invalid containerMethod: ${container_method}`)
         }

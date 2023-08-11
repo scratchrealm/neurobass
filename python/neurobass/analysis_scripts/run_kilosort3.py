@@ -179,7 +179,7 @@ class NwbRecordingSegment(si.BaseRecordingSegment):
         else:
             return self._electrical_series_data[start_frame:end_frame, channel_indices]
 
-def _make_binary_recording(recording: si.BaseRecording) -> None:
+def _make_binary_recording(recording: si.BaseRecording) -> si.BinaryRecordingExtractor:
     os.mkdir('binary_recording')
     fname = 'binary_recording/recording.dat'
     if recording.get_num_segments() != 1:
@@ -194,7 +194,9 @@ def _make_binary_recording(recording: si.BaseRecording) -> None:
     ret = si.BinaryRecordingExtractor(
         file_paths=[fname],
         sampling_frequency=recording.get_sampling_frequency(),
-        channel_ids=recording.get_channel_ids()
+        channel_ids=recording.get_channel_ids(),
+        num_chan=recording.get_num_channels(),
+        dtype='int16'
     )
     ret.set_channel_locations(recording.get_channel_locations())
     return ret

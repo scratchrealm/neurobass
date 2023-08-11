@@ -17,9 +17,7 @@ type Props = {
 type Nba = {
     nbaType: 'mountainsort5' | 'kilosort3'
     recording_nwb_file?: string
-    options?: {
-        recording_electrical_series_path?: string
-    }
+    recording_electrical_series_path?: string
     required_resources?: {
         num_cpus: number
         ram_gb: number
@@ -53,13 +51,15 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
     const nba: Nba | undefined = useMemo(() => {
         if (editText === undefined) return undefined
         try {
-            return (yaml.load(editText) || {nbaType: 'mountainsort5'}) as Nba
+            return editText ? yaml.load(editText) as Nba : undefined
         } catch (e) {
             console.warn(editText)
             console.warn('Error parsing nba yaml')
-            return {nbaType: 'mountainsort5'} as Nba
+            return undefined
         }
     }, [editText])
+
+    console.log('--- nba', nba)
 
     const [editing, setEditing] = useState(false)
 
@@ -139,7 +139,7 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
                                                         value={(nba as any)[option.key]}
                                                         type={option.type}
                                                         required={option.required}
-                                                        onChange={value => setEditText(yaml.dump({...nba, options: {...nba.options, [option.key]: value}}))}
+                                                        onChange={value => setEditText(yaml.dump({...nba, [option.key]: value}))}
                                                     />
                                                 ) : (
                                                     <OptionDisplay

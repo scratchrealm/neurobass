@@ -6,6 +6,7 @@ from run_kilosort3 import run_kilosort3
 
 
 def main():
+    print('Preparing test data...')
     if os.path.exists('test_kilosort3_data'):
         shutil.rmtree('test_kilosort3_data')
     os.mkdir('test_kilosort3_data')
@@ -24,12 +25,16 @@ def main():
         dtype='int16'
     )
     recording2.set_channel_locations(recording.get_channel_locations())
-    run_kilosort3(
+
+    print('Executing run_kilosort3...')
+    sorting = run_kilosort3(
         recording=recording2,
         output_folder='test_kilosort3_data/sorting_output',
         use_docker=False,
         use_singularity=True
     )
+
+    print(sorting)
 
 if __name__ == '__main__':
     main()

@@ -3,8 +3,9 @@ from pathlib import Path
 import subprocess
 import numpy as np
 import spikeinterface as si
+import spikeinterface.extractors as se
 
-# from SpikeInterface (kilsort.py)
+# from SpikeInterface (kilosort.py)
 _default_params = {
     "detect_threshold": 6,
     "car": True,
@@ -19,7 +20,7 @@ _default_params = {
     "delete_recording_dat": False,
 }
 
-# from SpikeInterface (kilsort3.py)
+# from SpikeInterface (kilosort3.py)
 _default_params.update({
     "detect_threshold": 6,
     "projection_threshold": [9, 9],
@@ -104,6 +105,7 @@ def run_kilosort3(
         raise ValueError("Recording dtype must be int16")
     
     # check installation
+    print('Checking installation...')
     if use_singularity:
         _check_singularity_installed()
     elif use_docker:
@@ -112,6 +114,7 @@ def run_kilosort3(
         _check_kilosort3_installed()
     
     # set default params
+    print('Setting params...')
     params = _default_params.copy()
     params.update(sorting_params)
     _check_params(recording, params)
@@ -128,6 +131,7 @@ def run_kilosort3(
     sorter_output_folder = Path(output_folder)
     
     # Generate opts.mat file
+    print('Generating opts.mat file...')
     # From SpikeInterface
     ops = {}
 
@@ -155,13 +159,13 @@ def run_kilosort3(
         if v is None:
             raise Exception(f"Parameter `{k}` is None")
     
-    print(ops)
     ops = {"ops": ops}
     import scipy.io
 
     scipy.io.savemat(str(sorter_output_folder / "ops.mat"), ops)
 
     # Generate channel map file
+    print('Generating channel map file...')
     _generate_channel_map_file(recording, sorter_output_folder)
 
     recording_parent_folder = binary_file_path.parent
@@ -171,9 +175,10 @@ def run_kilosort3(
         str(sorter_output_folder.absolute()): {"bind": str(sorter_output_folder.absolute()), "mode": "rw"}
     }
 
-    command_in_container = f'{_compiled_name} {sorter_output_folder.absolute()}'
+    command_in_container = f'{_compiled_name} {str(sorter_output_folder.absolute())}'
     
     if use_docker:
+        print('Using docker (THIS METHOD HAS NOT YET BEEN TESTED)...')
         import docker
         client = docker.from_env()
 
@@ -190,6 +195,7 @@ def run_kilosort3(
             docker_container.stop()
             docker_container.remove()
     elif use_singularity:
+        print('Using singularity...')
         from spython.main import Client
 
         # load local image file if it exists, otherwise search dockerhub
@@ -209,20 +215,35 @@ def run_kilosort3(
         # bin options
         singularity_bind = ",".join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
         options = ["--bind", singularity_bind]
-
-        # only nvidia at the moment
         options += ["--nv"]
 
-        client_instance = Client.instance(singularity_image, start=False, options=options)
+        singularity_cmd = f'singularity exec {" ".join(options)} {singularity_image} {command_in_container}'
 
-        client_instance.start()
-        try:
-            options = ["--cleanenv", "--env"]
-            Client.execute(client_instance, command_in_container, options=options)
-        finally:
-            client_instance.stop()
+        print(f'Executing command in singularity container: {singularity_cmd}')
+        subprocess.run(singularity_cmd, shell=True)
+
+        # For some reason, the below was not working for me
+        # client_instance = Client.instance(singularity_image, start=False, options=options)
+
+        # print('Starting singularity instance...')
+        # client_instance.start()
+        # try:
+        #     print(f'Executing command in singularity instance: {command_in_container}')
+        #     options = ["--cleanenv", "--env"]
+        #     res = Client.execute(client_instance, command_in_container, options=options)
+        #     print(res)
+        # finally:
+        #     print('Stopping singularity instance...')
+        #     client_instance.stop()
     else:
         raise Exception("Not implemented yet")
+    
+        
+    # load output
+    keep_good_only = sorting_params.get("keep_good_only", True)
+    sorting = se.KiloSortSortingExtractor(folder_path=sorter_output_folder, keep_good_only=keep_good_only)
+
+    return sorting
         
 
 def _check_singularity_installed():

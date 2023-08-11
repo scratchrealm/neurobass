@@ -11,6 +11,7 @@ import remfile
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
+from helpers.run_kilosort3 import run_kilosort3
 
 import boto3
 
@@ -28,6 +29,9 @@ s3 = boto3.client('s3',
 
 
 def main():
+    working_dir = 'working'
+    os.mkdir(working_dir)
+
     nba_file_name = os.environ['NBA_FILE_NAME']
     with open(nba_file_name, 'r') as f:
         nba = yaml.safe_load(f)
@@ -55,11 +59,13 @@ def main():
     recording2 = _make_binary_recording(recording)
 
     # run kilosort3 in the container
-    container_mode = os.environ['NEUROBASS_CONTAINER_MODE']
-    sorting = ss.run_kilosort3(
-        recording2,
-        singularity_image=(container_mode == 'singularity'),
-        docker_image=(container_mode == 'docker')
+    container_mode = os.getenv('NEUROBASS_CONTAINER_MODE', 'singularity') # for now default to singularity
+    sorting=run_kilosort3(
+        recording=recording2,
+        sorting_params={},
+        output_folder=working_dir,
+        use_docker=container_mode == 'docker',
+        use_singularity=container_mode == 'singularity'
     )
 
     with pynwb.NWBHDF5IO(file=h5py.File(remf, 'r'), mode='r') as io:

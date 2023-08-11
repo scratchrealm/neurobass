@@ -302,6 +302,9 @@ export class RunningJob {
                     }
                 }
 
+                const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
+                if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
+
                 let runPyContent: string
                 if ((nbaType === 'mountainsort5') || (nbaType === 'kilosort3')) {
                     const recordingNwbFile = nba['recording_nwb_file']
@@ -319,16 +322,28 @@ export class RunningJob {
                         throw new Error('Missing recording_electrical_series_path')
                     }
                     if (nbaType === 'mountainsort5') {
-                        runPyContent = createMountainsort5RunPyContent()
+                        runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
                     }
                     else if (nbaType === 'kilosort3') {
-                        runPyContent = createKilosort3RunPyContent()
+                        runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
                     }
                 }
                 else {
                     throw new Error(`Unexpected nba type: ${nbaType}`)
                 }
                 fs.writeFileSync(path.join(scriptJobDir, 'run.py'), runPyContent)
+
+                // write all the .py files in the analysisScriptsDir/helpers
+                fs.mkdirSync(path.join(scriptJobDir, 'helpers'), {recursive: true})
+                const helpersDir = path.join(analysisScriptsDir, 'helpers')
+                const helperFiles = fs.readdirSync(helpersDir)
+                for (const helperFile of helperFiles) {
+                    if (helperFile.endsWith('.py')) {
+                        const helperFileContent = fs.readFileSync(path.join(helpersDir, helperFile), 'utf8')
+                        fs.writeFileSync(path.join(scriptJobDir, 'helpers', helperFile), helperFileContent)
+                    }
+                }
+
                 const runShContent = `
     set -e # exit on error and use return code of last command as return code of script
     clean_up () {
@@ -551,20 +566,6 @@ export class RunningJob {
             return
         }
     }
-}
-
-const createMountainsort5RunPyContent = (): string => {
-    // read from $ANALYSIS_SCRIPTS_DIR/analysis_mountainsort5.py
-    const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
-    if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
-    return fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
-}
-
-const createKilosort3RunPyContent = (): string => {
-    // read from $ANALYSIS_SCRIPTS_DIR/analysis_kilosort3.py
-    const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
-    if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
-    return fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
 }
 
 const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {

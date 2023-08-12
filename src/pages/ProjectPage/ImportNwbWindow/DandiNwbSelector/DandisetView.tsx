@@ -15,6 +15,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
     const [dandisetResponse, setDandisetResponse] = useState<DandisetSearchResultItem | null>(null)
     const [dandisetVersionInfo, setDandisetVersionInfo] = useState<DandisetVersionInfo | null>(null)
     const [assetsResponses, setAssetsResponses] = useState<AssetsResponse[]>([])
+    const [incomplete, setIncomplete] = useState(false)
 
     useEffect(() => {
         let canceled = false
@@ -52,29 +53,40 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
     }, [dandisetId, dandisetResponse, V])
 
     useEffect(() => {
+        const maxNumPages = 10
+
         let canceled = false
         setAssetsResponses([])
+        setIncomplete(false)
         if (!dandisetId) return
         if (!dandisetResponse) return
         if (!V) return
         ; (async () => {
-            const rr: AssetsResponse[] = []
-            let uu = `https://api.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/assets/`
+            let rr: AssetsResponse[] = []
+            let uu: string | null = `https://api.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/assets/?page_size=1000`
+            let count = 0
             while (uu) {
-                const response = await fetch(uu)
+                if (count >= maxNumPages) {
+                    setIncomplete(true)
+                    break
+                }
+                const rrr: any = await fetch(uu) // don't know why typescript is telling me I need any type here
                 if (canceled) return
-                if (response.status === 200) {
-                    const json = await response.json()
-                    rr.push(json)
+                if (rrr.status === 200) {
+                    const json = await rrr.json()
+                    rr = [...rr, json] // important to make a copy of rr
                     uu = json.next
                 }
+                else uu = null
+                count += 1
+                setAssetsResponses(rr)
             }
-            setAssetsResponses(rr)
         })()
         return () => {canceled = true}
     }, [dandisetId, dandisetResponse, V])
 
     const allAssets = useMemo(() => {
+        console.log('--- x1')
         const rr: AssetsResponseItem[] = []
         assetsResponses.forEach(assetsResponse => {
             rr.push(...assetsResponse.results)
@@ -104,6 +116,18 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
             <div style={{fontSize: 14, padding: 5}}>
                 {X.metadata.description}
             </div>
+            {
+                <div style={{fontSize: 14, padding: 5}}>
+                    <span style={{color: 'gray'}}>Loaded {allAssets.length} assets</span>
+                </div>
+            }
+            {
+                incomplete && (
+                    <div style={{fontSize: 14, padding: 5}}>
+                        <span style={{color: 'red'}}>Warning: only showing first {assetsResponses.length} pages of assets</span>
+                    </div>
+                )
+            }
             <AssetsBrowser assetItems={allAssets} onClick={onClickAsset} />
         </div>
     )
@@ -139,7 +163,7 @@ type AssetsBrowserProps = {
 
 const AssetsBrowser: FunctionComponent<AssetsBrowserProps> = ({assetItems, onClick}) => {
     const folders: string[] = useMemo(() => {
-        const folders = assetItems.map(assetItem => assetItem.path.split('/')[0])
+        const folders = assetItems.filter(a => (a.path.includes('/'))).map(assetItem => assetItem.path.split('/')[0])
         const uniqueFolders = [...new Set(folders)].sort()
         return uniqueFolders
     }, [assetItems])

@@ -40,11 +40,12 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
 
     const [mode, setMode] = useState<'manual' | 'dandi'>('dandi')
 
-    const handleDandiNwbSelected = useCallback((nwbUrl: string, dandisetId: string, dandisetVersion: string, assetId: string) => {
+    const handleDandiNwbSelected = useCallback((nwbUrl: string, dandisetId: string, dandisetVersion: string, assetId: string, assetPath: string) => {
         setNwbUrl(nwbUrl)
         setDandisetId(dandisetId)
         setDandisetVersion(dandisetVersion)
         setDandiAssetId(assetId)
+        setFileName(assetPath)
         setMode('manual')
     }, [])
 
@@ -52,7 +53,7 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
 
     return (
         <div style={{position: 'absolute', width, height, overflow: 'hidden'}}>
-            <div style={{position: 'absolute', width, height: topAreaHeight, overflow: 'hidden', background: 'white'}}>
+            <div style={{position: 'absolute', width, height: topAreaHeight, overflow: 'hidden', background: 'white', paddingLeft: 20}}>
                 {/* Radio boxes for selecting manual or dandi mode */}
                 <input type="radio" id="manual" name="mode" value="manual" checked={mode === 'manual'} onChange={e => setMode('manual')} />
                 <label htmlFor="manual">Manual import</label>

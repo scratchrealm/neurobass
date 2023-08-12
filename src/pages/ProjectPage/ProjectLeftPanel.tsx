@@ -11,7 +11,6 @@ import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
 import CloneProjectWindow from "./CloneProjectWindow/CloneProjectWindow";
-import ImportNwbWindow from "./ImportNwbWindow/ImportNwbWindow";
 import NewAnalysisWindow from "./NewAnalysisWindow/NewAnalysisWindow";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
 import ProjectFileBrowser2 from "./ProjectFileBrowser/ProjectFileBrowser2";
@@ -21,15 +20,15 @@ import ProjectSettingsWindow from "./ProjectSettingsWindow";
 type Props = {
     width: number
     height: number
+    onImportNwb: () => void
 }
 
-const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
+const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}) => {
     const {projectId, project, workspaceId, openTab, closeTab, projectFiles, setProjectProperty, refreshFiles, deleteFile, duplicateFile, renameFile} = useProject()
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: cloneProjectWindowVisible, handleOpen: openCloneProjectWindow, handleClose: closeCloneProjectWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
     const {visible: newAnalysisWindowVisible, handleOpen: openNewAnalysisWindow, handleClose: closeNewAnalysisWindow} = useModalDialog()
-    const {visible: importNwbWindowVisible, handleOpen: openImportNwbWindow, handleClose: closeImportNwbWindow} = useModalDialog()
     const {workspace, workspaceRole} = useWorkspace()
     const {setRoute} = useRoute()
     const handleOpenFile = useCallback((fileName: string) => {
@@ -107,10 +106,9 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
         await setProjectFileContent(workspaceId, projectId, fileName, fileContent, auth)
         closeNewFileWindow()
         closeNewAnalysisWindow()
-        closeImportNwbWindow()
         refreshFiles()
         openTab(`file:${fileName}`)
-    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow, closeImportNwbWindow, closeNewAnalysisWindow])
+    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow, closeNewAnalysisWindow])
 
     const cloneProjectTitle = userId ? 'Clone this project' : 'You must be logged in to clone this project.'
 
@@ -150,7 +148,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
             <hr />
 
             <div style={{paddingBottom: 5}}>
-                <SmallIconButton onClick={openImportNwbWindow} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
+                <SmallIconButton onClick={onImportNwb} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
                 <br />
                 <SmallIconButton onClick={openNewAnalysisWindow} title="Create a new analysis" icon={<PlayArrow />} label="Create analysis" fontSize={24} />
                 <br />
@@ -196,14 +194,6 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height}) => {
                 onClose={closeNewAnalysisWindow}
             >
                 <NewAnalysisWindow
-                    onCreateFile={handleCreateFile}
-                />
-            </ModalWindow>
-            <ModalWindow
-                open={importNwbWindowVisible}
-                onClose={closeImportNwbWindow}
-            >
-                <ImportNwbWindow
                     onCreateFile={handleCreateFile}
                 />
             </ModalWindow>

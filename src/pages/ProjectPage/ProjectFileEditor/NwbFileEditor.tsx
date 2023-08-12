@@ -2,7 +2,7 @@ import { AutoFixHigh, Chat } from "@mui/icons-material";
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
 import Hyperlink from "../../../components/Hyperlink";
 import Splitter from "../../../components/Splitter";
-import { AssetResponse } from "../ImportNwbWindow/DandiNwbSelector";
+import { AssetResponse } from "../ImportNwbWindow/DandiNwbSelector/DandiNwbSelector";
 import runStanc from "./runStanc";
 import StanCompileResultWindow from "./StanCompileResultWindow";
 import TextEditor, { ToolbarItem } from "./TextEditor";

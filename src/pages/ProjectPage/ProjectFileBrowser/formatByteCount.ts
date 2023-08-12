@@ -2,17 +2,17 @@ const formatByteCount = (a: number) => {
     if (a < 10000) {
         return `${a} bytes`
     }
-    else if (a < 100 * 1000) {
-        return `${formatNum(a / 1000)} KiB`
+    else if (a < 100 * 1024) {
+        return `${formatNum(a / 1024)} KB`
     }
-    else if (a < 100 * 1000 * 1000) {
-        return `${formatNum(a / (1000 * 1000))} MiB`
+    else if (a < 100 * 1024 * 1024) {
+        return `${formatNum(a / (1024 * 1024))} MB`
     }
-    else if (a < 100 * 1000 * 1000 * 1000) {
-        return `${formatNum(a / (1000 * 1000 * 1000))} GiB`
+    else if (a < 600 * 1024 * 1024 * 1024) {
+        return `${formatNum(a / (1024 * 1024 * 1025))} GB`
     }
     else {
-        return `${formatNum(a / (1000 * 1000 * 1000))} GiB`
+        return `${formatNum(a / (1024 * 1024 * 1024 * 1024))} TB`
     }
 }
 

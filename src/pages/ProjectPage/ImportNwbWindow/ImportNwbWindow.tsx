@@ -1,14 +1,17 @@
 import { Button } from "@mui/material";
 import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import Hyperlink from "../../../components/Hyperlink";
-import DandiNwbSelector from "./DandiNwbSelector";
+import DandiNwbSelector from "./DandiNwbSelector/DandiNwbSelector";
 import './table-x.css'
 
 type Props = {
+    width: number
+    height: number
     onCreateFile: (fileName: string, fileContent: string) => void
+    onClose: () => void
 }
 
-const ImportNwbWindow: FunctionComponent<Props> = ({onCreateFile}) => {
+const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}) => {
     const [dandisetId, setDandisetId] = useState<string>('')
     const [dandisetVersion, setDandisetVersion] = useState<string>('')
     const [dandiAssetId, setDandiAssetId] = useState<string>('')
@@ -22,6 +25,7 @@ const ImportNwbWindow: FunctionComponent<Props> = ({onCreateFile}) => {
             dandiAssetId: dandiAssetId || undefined
         }
         onCreateFile(fileName, JSON.stringify(a, null, 2))
+        setMode('dandi') // go back to the default mode
     }, [nwbUrl, fileName, onCreateFile, dandisetId, dandiAssetId, dandisetVersion])
 
     const [dandiArchiveExpanded, setDandiArchiveExpanded] = useState<boolean>(false)
@@ -44,17 +48,19 @@ const ImportNwbWindow: FunctionComponent<Props> = ({onCreateFile}) => {
         setMode('manual')
     }, [])
 
+    const topAreaHeight = 50
+
     return (
-        <div>
-            <p>
+        <div style={{position: 'absolute', width, height, overflow: 'hidden'}}>
+            <div style={{position: 'absolute', width, height: topAreaHeight, overflow: 'hidden', background: 'white'}}>
                 {/* Radio boxes for selecting manual or dandi mode */}
                 <input type="radio" id="manual" name="mode" value="manual" checked={mode === 'manual'} onChange={e => setMode('manual')} />
                 <label htmlFor="manual">Manual import</label>
                 &nbsp;&nbsp;&nbsp;&nbsp;
                 <input type="radio" id="dandi" name="mode" value="dandi" checked={mode === 'dandi'} onChange={e => setMode('dandi')} />
                 <label htmlFor="dandi">DANDI import</label>
-            </p>
-            <hr />
+                <hr />
+            </div>
             {
                 mode === 'manual' ? (
                     <table className="table-x" style={{padding: 10}}>
@@ -102,7 +108,13 @@ const ImportNwbWindow: FunctionComponent<Props> = ({onCreateFile}) => {
                         </tbody>
                     </table>
                 ) : mode === 'dandi' ? (
-                    <DandiNwbSelector onNwbFileSelected={handleDandiNwbSelected} />
+                    <div style={{position: 'absolute', top: topAreaHeight, width, height: height - topAreaHeight, overflow: 'hidden'}}>
+                        <DandiNwbSelector
+                            width={width}
+                            height={height - topAreaHeight}
+                            onNwbFileSelected={handleDandiNwbSelected}
+                        />
+                    </div>
                 ) : <span />
             }
             <hr />

@@ -28,8 +28,6 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
         setMode('dandi') // go back to the default mode
     }, [nwbUrl, fileName, onCreateFile, dandisetId, dandiAssetId, dandisetVersion])
 
-    const [dandiArchiveExpanded, setDandiArchiveExpanded] = useState<boolean>(false)
-
     const submitEnabled = useMemo(() => {
         if (!fileName) return false
         if (!nwbUrl) return false
@@ -64,50 +62,52 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
             </div>
             {
                 mode === 'manual' ? (
-                    <table className="table-x" style={{padding: 10}}>
-                        <tbody>
-                            <tr>
-                                <td>Name of new file in Neurobass:</td>
-                                <td>
-                                    <input type="text" style={{width: 500}} value={fileName} onChange={e => setFileName(e.target.value)} />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Bucket URL:</td>
-                                <td>
-                                    <input type="text" style={{width: 500}} value={nwbUrl} onChange={e => setNwbUrl(e.target.value)} />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Dandiset ID (optional):</td>
-                                <td>
-                                    <input type="text" style={{width: 500}} value={dandisetId} onChange={e => setDandisetId(e.target.value)} />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Dandiset version (optional):</td>
-                                <td>
-                                    <input type="text" style={{width: 500}} value={dandisetVersion} onChange={e => setDandisetVersion(e.target.value)} />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>DANDI asset ID (optional):</td>
-                                <td>
-                                    <input type="text" style={{width: 500}} value={dandiAssetId} onChange={e => setDandiAssetId(e.target.value)} />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colSpan={2}>
-                                    <hr />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colSpan={2}>
-                                    <Button variant="contained" onClick={handleSubmit} disabled={!submitEnabled}>Import</Button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div style={{position: 'absolute', top: topAreaHeight, width, height: height - topAreaHeight, overflow: 'hidden'}}>
+                        <table className="table-x" style={{padding: 10}}>
+                            <tbody>
+                                <tr>
+                                    <td>Name of new file in Neurobass:</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={fileName} onChange={e => setFileName(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Bucket URL:</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={nwbUrl} onChange={e => setNwbUrl(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Dandiset ID (optional):</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={dandisetId} onChange={e => setDandisetId(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Dandiset version (optional):</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={dandisetVersion} onChange={e => setDandisetVersion(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>DANDI asset ID (optional):</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={dandiAssetId} onChange={e => setDandiAssetId(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colSpan={2}>
+                                        <hr />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colSpan={2}>
+                                        <Button variant="contained" onClick={handleSubmit} disabled={!submitEnabled}>Import</Button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 ) : mode === 'dandi' ? (
                     <div style={{position: 'absolute', top: topAreaHeight, width, height: height - topAreaHeight, overflow: 'hidden'}}>
                         <DandiNwbSelector
@@ -117,16 +117,6 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
                         />
                     </div>
                 ) : <span />
-            }
-            <hr />
-            {
-                dandiArchiveExpanded ? (
-                    <iframe width="100%" height="1000px" src="https://dandiarchive.org" />
-                ) : (
-                    <Hyperlink>
-                        <span onClick={() => setDandiArchiveExpanded(true)}>View DANDI Archive</span>
-                    </Hyperlink>
-                )
             }
         </div>
     )

@@ -86,7 +86,6 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
     }, [dandisetId, dandisetResponse, V])
 
     const allAssets = useMemo(() => {
-        console.log('--- x1')
         const rr: AssetsResponseItem[] = []
         assetsResponses.forEach(assetsResponse => {
             rr.push(...assetsResponse.results)

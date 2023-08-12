@@ -24,8 +24,8 @@ const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSa
         <Splitter
             width={width}
             height={height}
-            initialPosition={width / 2}
-            direction="horizontal"
+            initialPosition={height * 2 / 3}
+            direction="vertical"
         >
             {
                 fileType === 'py' ? (

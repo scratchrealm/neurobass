@@ -16,6 +16,7 @@ type Props = {
     onDeleteFile: (path: string) => void
     onDuplicateFile: (path: string) => void
     onRenameFile: (path: string) => void
+    hideSizeColumn?: boolean
 }
 
 type FileItem = {
@@ -26,7 +27,7 @@ type FileItem = {
     timestampModified: number
 }
 
-const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, projectFiles}) => {
+const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, projectFiles, hideSizeColumn}) => {
     const {currentTabName} = useProject()
 
     const files = useMemo(() => {
@@ -82,14 +83,22 @@ const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile
     return (
         <div onMouseLeave={() => {setContextMenu({visible: false, x: 0, y: 0, fileId: ''})}} style={{position: 'absolute'}}>
             <table className="file-browser-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>File</th>
+                        <th>Modified</th>
+                        {!hideSizeColumn && <th>Size</th>}
+                    </tr>
+                </thead>
                 <tbody>
                     {
                         files.map(x => (
                             <tr key={x.id} onClick={() => handleClickFile(x.id)} onContextMenu={(evt) => handleContextMenu(evt, x.id)} style={{cursor: 'pointer'}}>
                                 <td><FileIcon fileName={x.name} /></td>
                                 <td>{x.name}</td>
-                                <td>{timeAgoString(x.timestampModified)}</td>
-                                <td>{formatByteCount(x.size)}</td>
+                                <td><span style={{whiteSpace: 'nowrap'}}>{timeAgoString(x.timestampModified)}</span></td>
+                                {!hideSizeColumn && <td>{formatByteCount(x.size)}</td>}
                             </tr>
                         ))
                     }

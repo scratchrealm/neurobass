@@ -1,4 +1,5 @@
 import { FunctionComponent } from "react";
+import HBoxLayout from "../../components/HBoxLayout";
 import Splitter from "../../components/Splitter";
 import { SetupComputeResources } from "../ComputeResourcesPage/ComputeResourcesContext";
 import WorkspaceLeftPanel from "./WorkspaceLeftPanel";
@@ -12,23 +13,28 @@ type Props = {
 }
 
 const WorkspacePage: FunctionComponent<Props> = ({workspaceId, width, height}) => {
+    const leftPanelWidth = limit(width * 2 / 7, 200, 350)
     return (
         <SetupWorkspacePage
             workspaceId={workspaceId}
         >
             <SetupComputeResources>
-                <Splitter
-                    direction="horizontal"
-                    width={width}
+                <HBoxLayout
+                    widths={[leftPanelWidth, width - leftPanelWidth]}
                     height={height}
-                    initialPosition={Math.max(250, Math.min(600, width / 4))}
                 >
                     <WorkspaceLeftPanel width={0} height={0} />
                     <WorkspaceMainPanel width={0} height={0} />
-                </Splitter>
+                </HBoxLayout>
             </SetupComputeResources>
         </SetupWorkspacePage>
     )
+}
+
+const limit = (x: number, min: number, max: number) => {
+    if (x < min) return min
+    if (x > max) return max
+    return x
 }
 
 export default WorkspacePage

@@ -1,7 +1,9 @@
+import { Add } from "@mui/icons-material";
 import { FunctionComponent } from "react";
 import { useModalDialog } from "../../ApplicationBar";
 import Hyperlink from "../../components/Hyperlink";
 import ModalWindow from "../../components/ModalWindow/ModalWindow";
+import SmallIconButton from "../../components/SmallIconButton";
 import CreateProjectWindow from "./CreateProjectWindow/CreateProjectWindow";
 import { useWorkspace } from "./WorkspacePageContext";
 
@@ -26,7 +28,7 @@ const ProjectsMenuBar: FunctionComponent<Props> = () => {
         <div>
             {
                 workspaceRole === 'admin' || workspaceRole === 'editor' ? (
-                    <Hyperlink onClick={() => openCreateProjectWindow()}>Create Project</Hyperlink>
+                    <SmallIconButton fontSize={20} icon={<Add />} label="Create project" onClick={() => openCreateProjectWindow()} />
                 ) : (
                     <span>&nbsp;</span>
                 )

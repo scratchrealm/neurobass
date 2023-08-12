@@ -9,8 +9,9 @@ type Props = {
 
 const WorkspaceMainPanel: FunctionComponent<Props> = ({ width, height }) => {
     return (
-        <div>
+        <div style={{padding: 10}}>
             <ProjectsMenuBar />
+            <div style={{ height: 10 }} />
             <ProjectsTable />
         </div>
     )

@@ -24,73 +24,13 @@ type Props = {
 }
 
 const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}) => {
-    const {projectId, project, workspaceId, openTab, closeTab, projectFiles, setProjectProperty, refreshFiles, deleteFile, duplicateFile, renameFile} = useProject()
+    const {projectId, project, workspaceId, openTab, projectFiles, setProjectProperty, refreshFiles} = useProject()
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: cloneProjectWindowVisible, handleOpen: openCloneProjectWindow, handleClose: closeCloneProjectWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
     const {visible: newAnalysisWindowVisible, handleOpen: openNewAnalysisWindow, handleClose: closeNewAnalysisWindow} = useModalDialog()
     const {workspace, workspaceRole} = useWorkspace()
     const {setRoute} = useRoute()
-    const handleOpenFile = useCallback((fileName: string) => {
-        openTab(`file:${fileName}`)
-    }, [openTab])
-
-    const handleDeleteFile = useCallback(async (fileName: string) => {
-        const okay = await confirm(`Delete ${fileName}?`)
-        if (!okay) return
-        deleteFile(fileName)
-        closeTab(`file:${fileName}`)
-    }, [deleteFile, closeTab])
-
-    const handleDuplicateFile = useCallback(async (fileName: string) => {
-        let newFileName: string | null
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            newFileName = await prompt('Enter new file name:', fileName)
-            if (!newFileName) return
-            if (newFileName !== fileName) {
-                break
-            }
-        }
-        const existingFile = projectFiles?.find(f => f.fileName === newFileName)
-        if (existingFile) {
-            await alert(`File ${newFileName} already exists.`)
-            return
-        }
-        duplicateFile(fileName, newFileName)
-    }, [projectFiles, duplicateFile])
-
-    const handleRenameFile = useCallback(async (fileName: string) => {
-        let newFileName: string | null
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            newFileName = await prompt('Enter new file name:', fileName)
-            if (!newFileName) return
-            if (newFileName !== fileName) {
-                break
-            }
-        }
-        const existingFile = projectFiles?.find(f => f.fileName === newFileName)
-        if (existingFile) {
-            await alert(`File ${newFileName} already exists.`)
-            return
-        }
-        renameFile(fileName, newFileName)
-    }, [projectFiles, renameFile])
-
-
-    const [initialized, setInitialized] = useState(false)
-
-    // if there is exactly one .nba file, open it
-    useEffect(() => {
-        if (!projectFiles) return
-        if (initialized) return
-        const nbaFiles = projectFiles.filter(f => f.fileName.endsWith('.nba'))
-        if (nbaFiles.length === 1) {
-            openTab(`file:${nbaFiles[0].fileName}`)
-        }
-        setInitialized(true)
-    }, [projectFiles, openTab, initialized])
 
     const handleEditProjectName = useCallback(async () => {
         const newName = await prompt('Enter new project name:', project?.name || '')
@@ -116,7 +56,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
     const W = width - 2 * padding
     const H = height - 2 * padding
     return (
-        <div style={{position: 'absolute', left: padding, top: padding, width: W, height: H}}>
+        <div style={{position: 'absolute', left: padding, top: padding, width: W, height: H, background: '#fafafa'}}>
             <BackButton />
             <hr />
             <div style={{fontWeight: 'bold', whiteSpace: 'nowrap', paddingBottom: 10}}>
@@ -159,13 +99,13 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
 
             <hr />
 
-            <ProjectFileBrowser2
+            {/* <ProjectFileBrowser2
                 projectFiles={projectFiles}
                 onOpenFile={handleOpenFile}
                 onDeleteFile={handleDeleteFile}
                 onDuplicateFile={handleDuplicateFile}
                 onRenameFile={handleRenameFile}
-            />
+            /> */}
 
             <ModalWindow
                 open={settingsWindowVisible}

@@ -28,7 +28,7 @@ const WorkspaceLeftPanel: FunctionComponent<Props> = ({ width, height }) => {
     }, [workspace, setWorkspaceProperty])
 
     return (
-        <div style={{position: 'absolute', left: padding, top: padding, width: W, height: H}}>
+        <div style={{position: 'absolute', left: padding, top: padding, width: W, height: H, background: '#fafafa'}}>
             <div>
                 <BackButton />
                 <hr />

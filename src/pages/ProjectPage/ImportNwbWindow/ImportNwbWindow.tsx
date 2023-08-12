@@ -11,7 +11,7 @@ type Props = {
     onClose: () => void
 }
 
-const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}) => {
+const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile, onClose}) => {
     const [dandisetId, setDandisetId] = useState<string>('')
     const [dandisetVersion, setDandisetVersion] = useState<string>('')
     const [dandiAssetId, setDandiAssetId] = useState<string>('')
@@ -25,7 +25,7 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
             dandiAssetId: dandiAssetId || undefined
         }
         onCreateFile(fileName, JSON.stringify(a, null, 2))
-        setMode('dandi') // go back to the default mode
+        setTimeout(() => {setMode('dandi')}, 2000) // go back to the default mode
     }, [nwbUrl, fileName, onCreateFile, dandisetId, dandiAssetId, dandisetVersion])
 
     const submitEnabled = useMemo(() => {
@@ -47,12 +47,13 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
         setMode('manual')
     }, [])
 
-    const topAreaHeight = 50
+    const topAreaHeight = 60
 
     return (
         <div style={{position: 'absolute', width, height, overflow: 'hidden'}}>
-            <div style={{position: 'absolute', width, height: topAreaHeight, overflow: 'hidden', background: 'white', paddingLeft: 20}}>
-                {/* Radio boxes for selecting manual or dandi mode */}
+            <div style={{position: 'absolute', width, height: topAreaHeight, overflow: 'hidden', background: 'white', paddingLeft: 15, paddingTop: 10}}>
+                <Hyperlink onClick={onClose}>&#8592; Back to project</Hyperlink>
+                &nbsp;&nbsp;&nbsp;&nbsp;
                 <input type="radio" id="manual" name="mode" value="manual" checked={mode === 'manual'} onChange={e => setMode('manual')} />
                 <label htmlFor="manual">Manual import</label>
                 &nbsp;&nbsp;&nbsp;&nbsp;
@@ -62,7 +63,7 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile}
             </div>
             {
                 mode === 'manual' ? (
-                    <div style={{position: 'absolute', top: topAreaHeight, width, height: height - topAreaHeight, overflow: 'hidden'}}>
+                    <div style={{position: 'absolute', top: topAreaHeight, left: 20, width: width - 40, height: height - topAreaHeight, overflow: 'hidden'}}>
                         <table className="table-x" style={{padding: 10}}>
                             <tbody>
                                 <tr>

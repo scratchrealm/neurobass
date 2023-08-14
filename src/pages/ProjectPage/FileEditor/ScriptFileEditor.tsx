@@ -1,7 +1,7 @@
 import { FunctionComponent } from "react";
 import Splitter from "../../../components/Splitter";
-import { useProject } from "../ProjectPageContext";
 import JobsWindow from "../JobsWindow/JobsWindow";
+import { useProject } from "../ProjectPageContext";
 import NbaFileEditor from "./NbaFileEditor";
 import TextEditor from "./TextEditor";
 

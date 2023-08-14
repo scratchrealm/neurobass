@@ -1,4 +1,4 @@
-import { Delete, PlayArrow, Refresh } from "@mui/icons-material";
+import { PlayArrow, Refresh } from "@mui/icons-material";
 import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import SmallIconButton from "../../../components/SmallIconButton";
 import { useWorkspace } from "../../WorkspacePage/WorkspacePageContext";
@@ -17,11 +17,23 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
     const {workspaceRole} = useWorkspace()
     const {refreshJobs, createJob, jobs, openTabs} = useProject()
 
-    const handleCreateJob = useCallback(async () => {
+    const handleCreateScriptJob = useCallback(async () => {
         createJob({scriptFileName: fileName})
     }, [createJob, fileName])
 
     const [createJobTitle, setCreateJobTitle] = useState('Run script')
+
+    const filteredJobs = useMemo(() => {
+        if (!jobs) return undefined
+        if (fileName.endsWith('.py')) {
+            return jobs.filter(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName))))
+        }
+        else if (fileName.endsWith('.nwb')) {
+            return jobs.filter(jj => (jj.inputFiles.map(x => (x.fileName)).includes(fileName)))
+        }
+        else return jobs
+    }, [jobs, fileName])
+
 
     const canCreateJob = useMemo(() => {
         if (!jobs) return false // not loaded yet
@@ -38,8 +50,8 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
             setCreateJobTitle('File has unsaved changes')
             return false
         }
-        const pendingJob = jobs.find(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName)) && jj.status === 'pending'))
-        const runningJob = jobs.find(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName)) && jj.status === 'running'))
+        const pendingJob = filteredJobs && filteredJobs.find(jj => (jj.status === 'pending'))
+        const runningJob = filteredJobs && filteredJobs.find(jj => (jj.status === 'running'))
         if ((pendingJob) || (runningJob)) {
             if (!(queryParams['test'] === '1')) {
                 setCreateJobTitle('A job is already pending or running for this script.')
@@ -54,21 +66,23 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
             setCreateJobTitle('You do not have permission to run scripts for this project.')
         }
         return false
-    }, [workspaceRole, jobs, fileName, openTabs])
+    }, [workspaceRole, jobs, fileName, openTabs, filteredJobs])
 
     const iconFontSize = 20
 
     return (
         <>
             <div>
-                <SmallIconButton
-                    icon={<PlayArrow />}
-                    onClick={handleCreateJob}
-                    disabled={!canCreateJob}
-                    title={createJobTitle}
-                    label="Run"
-                    fontSize={iconFontSize}
-                />
+                {fileName.endsWith('.py') && (
+                    <SmallIconButton
+                        icon={<PlayArrow />}
+                        onClick={handleCreateScriptJob}
+                        disabled={!canCreateJob}
+                        title={createJobTitle}
+                        label="Run"
+                        fontSize={iconFontSize}
+                    />
+                )}
                 &nbsp;&nbsp;&nbsp;&nbsp;
                 <SmallIconButton
                     icon={<Refresh />}
@@ -80,6 +94,7 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
             </div>
             <JobsTable
                 fileName={fileName}
+                jobs={filteredJobs}
             />
         </>
     )

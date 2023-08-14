@@ -1,10 +1,15 @@
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
+import { useModalDialog } from "../../../ApplicationBar";
 import Hyperlink from "../../../components/Hyperlink";
+import ModalWindow from "../../../components/ModalWindow/ModalWindow";
+import Splitter from "../../../components/Splitter";
 import { fetchFile } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
 import { NBFile } from "../../../types/neurobass-types";
 import { AssetResponse } from "../ImportNwbWindow/DandiNwbSelector/types";
+import JobsWindow from "../JobsWindow/JobsWindow";
 import { useProject } from "../ProjectPageContext";
+import RunSpikeSortingWindow from "./RunSpikeSortingWindow/RunSpikeSortingWindow";
 
 
 type Props = {
@@ -13,15 +18,29 @@ type Props = {
     height: number
 }
 
-type NwbLink = {
-    url: string
-    dandisetId?: string
-    dandisetVersion?: string
-    dandiAssetId?: string
-    dandiAssetPath?: string
+const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
+    return (
+        <Splitter
+            width={width}
+            height={height}
+            initialPosition={height * 2 / 3}
+            direction="vertical"
+        >
+            <NwbFileEditorChild
+                width={0}
+                height={0}
+                fileName={fileName}
+            />
+            <JobsWindow
+                width={0}
+                height={0}
+                fileName={fileName}
+            />
+        </Splitter>
+    )
 }
 
-const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
+const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height}) => {
     const [assetResponse, setAssetResponse] = useState<AssetResponse | null>(null)
 
     const {projectId} = useProject()
@@ -72,6 +91,11 @@ const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
         console.warn(`Mismatch between dandiAssetPath (${dandiAssetPath}) and assetResponse.path (${assetResponse.path})`)
     }
 
+    const {visible: runSpikeSortingWindowVisible, handleOpen: openRunSpikeSortingWindow, handleClose: closeRunSpikeSortingWindow} = useModalDialog()
+    const handleRunSpikeSorting = useCallback(() => {
+        openRunSpikeSortingWindow()
+    }, [openRunSpikeSortingWindow])
+
     return (
         <div style={{position: 'absolute', width, height, background: 'white'}}>
             <hr />
@@ -108,7 +132,24 @@ const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
                     </div>
                 )
             }
+            <div>&nbsp;</div>
+            {
+                nwbUrl && (
+                    <div>
+                        <Hyperlink onClick={handleRunSpikeSorting}>Run spike sorting</Hyperlink>
+                    </div>
+                )
+            }
             <hr />
+            <ModalWindow
+                open={runSpikeSortingWindowVisible}
+                onClose={closeRunSpikeSortingWindow}
+            >
+                <RunSpikeSortingWindow
+                    onClose={closeRunSpikeSortingWindow}
+                    fileName={fileName}
+                />
+            </ModalWindow>
         </div>
     )
 }

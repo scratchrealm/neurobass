@@ -12,10 +12,11 @@ import { useProject } from "../ProjectPageContext";
 
 type Props = {
     fileName: string
+    jobs: NBJob[] | undefined
 }
 
-const JobsTable: FunctionComponent<Props> = ({ fileName }) => {
-    const {jobs, openTab} = useProject()
+const JobsTable: FunctionComponent<Props> = ({ fileName, jobs }) => {
+    const {openTab} = useProject()
     const {workspaceRole} = useWorkspace()
 
     const sortedJobs = useMemo(() => {
@@ -37,7 +38,7 @@ const JobsTable: FunctionComponent<Props> = ({ fileName }) => {
             </thead>
             <tbody>
                 {
-                    sortedJobs.filter(jj => (jj.processType === 'script' && jj.inputParameters.map(x => (x.value)).includes(fileName))).map((jj) => (
+                    sortedJobs.map((jj) => (
                         <tr key={jj.jobId}>
                             <td>{
                                 (workspaceRole === 'admin' || workspaceRole === 'editor') && (

@@ -1,6 +1,5 @@
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs';
-import yaml from 'js-yaml';
 import path from 'path';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
 import { NBFile, NBJob } from "./types/neurobass-types";
@@ -13,8 +12,9 @@ export const getPresetConfig = () => {
 }
 const presetConfig = getPresetConfig()
 
-type NbaOutput = {
-    sorting_nwb_file: string
+type SortingOutput = {
+    output_file_url: string
+    output_file_size: number
 }
 
 const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
@@ -175,7 +175,19 @@ export class RunningJob {
             computeResourcePrivateKey: process.env.COMPUTE_RESOURCE_PRIVATE_KEY
         })
     }
-    private async _loadFileContent(fileName: string): Promise<string> {
+    private async _loadFileData(fileName: string): Promise<string> {
+        const cc = await this._loadFileContentString(fileName)
+        if (cc.startsWith('data:')) {
+            return cc.slice('data:'.length)
+        }
+        else if (cc.startsWith('blob:')) {
+            return await this._loadDataBlob(cc.slice('blob:'.length))
+        }
+        else {
+            throw Error('Unable to load file content: ' + fileName + ' ' + cc)
+        }
+    }
+    private async _loadFileContentString(fileName: string): Promise<string> {
         const req: GetFileRequest = {
             type: 'getFile',
             timestamp: Date.now() / 1000,
@@ -190,16 +202,7 @@ export class RunningJob {
             console.warn(resp)
             throw Error('Unexpected response type. Expected getFile')
         }
-        const cc = resp.file.content
-        if (cc.startsWith('data:')) {
-            return cc.slice('data:'.length)
-        }
-        else if (cc.startsWith('blob:')) {
-            return await this._loadDataBlob(cc.slice('blob:'.length))
-        }
-        else {
-            throw Error('Unable to load file content: ' + fileName + ' ' + cc)
-        }
+        return resp.file.content
     }
     private async _loadDataBlob(sha1: string): Promise<string> {
         const req: GetDataBlobRequest = {
@@ -239,6 +242,26 @@ export class RunningJob {
             throw Error('Unexpected response type. Expected setFile')
         }
     }
+    async _setUrlFile(fileName: string, url: string, size: number) {
+        const req: SetFileRequest = {
+            type: 'setFile',
+            timestamp: Date.now() / 1000,
+            workspaceId: this.job.workspaceId,
+            projectId: this.job.projectId,
+            fileName,
+            content: `url:${url}`,
+            size,
+            metadata: {}
+        }
+        const resp = await this._postNeurobassRequest(req)
+        if (!resp) {
+            throw Error('Unable to set project file')
+        }
+        if (resp.type !== 'setFile') {
+            console.warn(resp)
+            throw Error('Unexpected response type. Expected setFile')
+        }
+    }
     private async _loadFiles(projectId: string): Promise<NBFile[]> {
         const req: GetFilesRequest = {
             type: 'getFiles',
@@ -267,21 +290,26 @@ export class RunningJob {
             await this._setJobProperty('consoleOutput', consoleOutput)
         }
         try {
-            if (this.job.processType !== 'script') {
-                throw Error('Unexpected process type: ' + this.job.processType)
+            const processType = this.job.processType
+            if (!['script', 'mountainsort5', 'kilosort3'].includes(processType)) {
+                throw Error(`Unexpected process type: ${processType}`)
             }
-            const scriptFileName = (this.job.inputParameters.find(p => (p.name === 'script_file')) || {}).value
-            if (!scriptFileName) {
-                throw Error('Missing script_file parameter')
-            }
-            const scriptFileContent = await this._loadFileContent(scriptFileName)
             const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.job.jobId)
             fs.mkdirSync(jobDir, {recursive: true})
-            fs.writeFileSync(path.join(jobDir, scriptFileName), scriptFileContent)
 
             const files = await this._loadFiles(this.job.projectId)
 
-            if (scriptFileName.endsWith('.py')) {
+            let scriptPyFileName = ''
+            if (processType === 'script') {
+                scriptPyFileName = (this.job.inputParameters.find(p => (p.name === 'script_file')) || {}).value
+                if (!scriptPyFileName) {
+                    throw Error('Missing script_file parameter')
+                }
+                if (!scriptPyFileName.endsWith('.py')) {
+                    throw Error('Only python scripts are supported')
+                }
+                const scriptFileContent = await this._loadFileData(scriptPyFileName)
+                fs.writeFileSync(path.join(jobDir, scriptPyFileName), scriptFileContent)
                 for (const pf of files) {
                     let includeFile = false
                     if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
@@ -296,21 +324,26 @@ export class RunningJob {
                         }
                     }
                     if (includeFile) {
-                        const content = await this._loadFileContent(pf.fileName)
+                        const content = await this._loadFileData(pf.fileName)
                         fs.writeFileSync(path.join(jobDir, pf.fileName), content)
                     }
                 }
+                const runShContent = `
+set -e # exit on error and use return code of last command as return code of script
+clean_up () {
+    ARG=$?
+    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
+    exit $ARG
+} 
+trap clean_up EXIT
+python3 ${scriptPyFileName}
+`
+                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
             }
-
-            if (scriptFileName.endsWith('.nba')) {
-                const nbaFileName = scriptFileName
-                const nbaFileContent = scriptFileContent
-                const nba = yaml.load(nbaFileContent)
-                const nbaType = nba['nba_type']
-
+            if (['mountainsort5', 'kilosort3'].includes(processType)) {
                 let analysisRunPrefix = process.env.ANALYSIS_RUN_PREFIX || ''
                 if ((!analysisRunPrefix) && (presetConfig === 'flatiron')) {
-                    if (nbaType === 'kilosort3') {
+                    if (processType === 'kilosort3') {
                         analysisRunPrefix = 'srun -p gpu --gpus-per-task 1 --gpus 1 -t 0-4:00'
                     }
                 }
@@ -318,32 +351,29 @@ export class RunningJob {
                 const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
                 if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
 
+                const recordingNwbFile = this.job.inputFiles.find(f => (f.name === 'input'))?.fileName
+                if (!recordingNwbFile) {
+                    throw Error('Missing input file')
+                }
+
                 let runPyContent: string
-                if ((nbaType === 'mountainsort5') || (nbaType === 'kilosort3')) {
-                    const recordingNwbFile = nba['recording_nwb_file']
-                    if (!recordingNwbFile) {
-                        throw new Error('Missing recording_nwb_file')
-                    }
-                    const x = files.find(pf => pf.fileName === recordingNwbFile)
-                    if (!x) {
-                        throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
-                    }
-                    const recordingNwbFileContent = await this._loadFileContent(recordingNwbFile)
-                    fs.writeFileSync(path.join(jobDir, recordingNwbFile), recordingNwbFileContent)
-                    const recordingElectricalSeriesPath = nba['recording_electrical_series_path']
-                    if (!recordingElectricalSeriesPath) {
-                        throw new Error('Missing recording_electrical_series_path')
-                    }
-                    if (nbaType === 'mountainsort5') {
-                        runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
-                    }
-                    else if (nbaType === 'kilosort3') {
-                        runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
-                    }
+
+                const x = files.find(pf => pf.fileName === recordingNwbFile)
+                if (!x) {
+                    throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
                 }
-                else {
-                    throw new Error(`Unexpected nba type: ${nbaType}`)
+                const cs = await this._loadFileContentString(recordingNwbFile)
+                if (!cs.startsWith('url:')) {
+                    throw Error('Unexpected file content string: ' + cs)
                 }
+                const nwbUrl = cs.slice('url:'.length)
+                if (processType === 'mountainsort5') {
+                    runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
+                }
+                else if (processType === 'kilosort3') {
+                    runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
+                }
+                
                 fs.writeFileSync(path.join(jobDir, 'run.py'), runPyContent)
 
                 // write all the .py files in the analysisScriptsDir/helpers
@@ -358,36 +388,17 @@ export class RunningJob {
                 }
 
                 const runShContent = `
-    set -e # exit on error and use return code of last command as return code of script
-    clean_up () {
-        ARG=$?
-        chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-        exit $ARG
-    } 
-    trap clean_up EXIT
-    export NBA_FILE_NAME="${nbaFileName}"
-    ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
-    `
+set -e # exit on error and use return code of last command as return code of script
+clean_up () {
+    ARG=$?
+    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
+    exit $ARG
+} 
+trap clean_up EXIT
+export INPUT_NWB_URL="${nwbUrl}"
+${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
+`
                 fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
-            }
-            else if (scriptFileName.endsWith('.py')) {
-                const runShContent = `
-    set -e # exit on error and use return code of last command as return code of script
-    clean_up () {
-        ARG=$?
-        chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-        exit $ARG
-    } 
-    trap clean_up EXIT
-    python3 ${scriptFileName}
-    `
-                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
-            }
-
-            const uploadNbaOutput = async () => {
-                const NbaOutput = await loadNbaOutput(`${jobDir}/output`)
-                console.info(`Uploading NBA output to ${scriptFileName}.out (${this.job.jobId})`)
-                await this._setFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
             }
 
             await new Promise<void>((resolve, reject) => {
@@ -400,7 +411,7 @@ export class RunningJob {
                 let args: string[]
 
                 let containerMethod = process.env.CONTAINER_METHOD || 'none'
-                if (scriptFileName.endsWith('.nba')) {
+                if (processType !== 'script') {
                     containerMethod = 'none'
                 }
 
@@ -414,15 +425,7 @@ export class RunningJob {
                         '--pwd', '/working',
                         '--bind', `${absJobDir}:/working`
                     ]
-                    if (scriptFileName.endsWith('.py')) {
-                        args = [...args, ...[
-                            // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
-                            // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
-                            'docker://magland/neurobass-default',
-                            'bash', 'run.sh'
-                        ]]
-                    }
-                    else if (scriptFileName.endsWith('.nba')) {
+                    if (processType === 'script') {
                         args = [...args, ...[
                             // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
                             // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
@@ -431,7 +434,12 @@ export class RunningJob {
                         ]]
                     }
                     else {
-                        throw Error(`Unsupported script file name: ${scriptFileName}`)
+                        args = [...args, ...[
+                            // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
+                            // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
+                            'docker://magland/neurobass-default',
+                            'bash', 'run.sh'
+                        ]]
                     }
                 }
                 else if (containerMethod === 'docker') {
@@ -442,7 +450,7 @@ export class RunningJob {
                         '-v', `${absJobDir}:/working`,
                         '-w', '/working'
                     ]
-                    if (scriptFileName.endsWith('.py')) {
+                    if (processType === 'singularity') {
                         const num_cpus = 2
                         const ram_gb = 2
                         args = [...args, ...[
@@ -453,15 +461,12 @@ export class RunningJob {
                             '-c', `bash run.sh` // tricky - need to put the last two args together so that it ends up in a quoted argument
                         ]]
                     }
-                    else if (scriptFileName.endsWith('.nba')) {
+                    else {
                         args = [...args, ...[
                             'magland/neurobass-default',
                             'bash',
                             '-c', 'bash run.sh' // tricky - need to put the last two args together so that it ends up in a quoted argument
                         ]]
-                    }
-                    else {
-                        throw Error(`Unsupported script file name: ${scriptFileName}`)
                     }
                 }
                 else if (containerMethod === 'none') {
@@ -482,7 +487,7 @@ export class RunningJob {
 
                 const timeoutId = setTimeout(() => {
                     if (returned) return
-                    console.info(`Killing job: ${this.job.jobId} - ${scriptFileName} due to timeout`)
+                    console.info(`Killing job: ${this.job.jobId} - ${processType} due to timeout`)
                     returned = true
                     this.#childProcess.kill()
                     reject(Error('Timeout'))
@@ -523,14 +528,11 @@ export class RunningJob {
             
             await updateConsoleOutput()
 
-            if (scriptFileName.endsWith('.nba')) {
-                await uploadNbaOutput()
-            }
-            else {
+            if (processType === 'script') {
                 const outputFileNames: string[] = []
                 const files = fs.readdirSync(jobDir)
                 for (const file of files) {
-                    if ((file !== scriptFileName) && (file !== 'run.sh')) {
+                    if ((file !== scriptPyFileName) && (file !== 'run.sh')) {
                         // check whether it is a file
                         const stat = fs.statSync(path.join(jobDir, file))
                         if (stat.isFile()) {
@@ -554,6 +556,15 @@ export class RunningJob {
                     await this._setFile(outputFileName, content)
                 }
             }
+            else {
+                // spike sorting output
+                const out = await loadOutputJson(jobDir)
+                const outputFileName = this.job.outputFiles.find(f => (f.name === 'output'))?.fileName
+                if (!outputFileName) {
+                    throw Error('No output file specified')
+                }
+                await this._setUrlFile(outputFileName, out.output_file_url, out.output_file_size)
+            }
 
             await this._setJobProperty('status', 'completed')
             this.#status = 'completed'
@@ -572,7 +583,7 @@ export class RunningJob {
     }
 }
 
-const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {
+const loadOutputJson = async (outputDir: string): Promise<SortingOutput> => {
     const output = await fs.promises.readFile(path.join(outputDir, 'out.json'), {encoding: 'utf8'})
     return JSON.parse(output)
 }

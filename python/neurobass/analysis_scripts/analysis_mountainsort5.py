@@ -1,4 +1,3 @@
-import yaml
 from typing import Union, List
 import os
 import json
@@ -10,6 +9,8 @@ from uuid import uuid4
 import remfile
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
+import spikeinterface.sorters as ss
+from helpers.run_kilosort3 import run_kilosort3
 
 import boto3
 
@@ -28,16 +29,12 @@ s3 = boto3.client('s3',
 
 
 def main():
-    nba_file_name = os.environ['NBA_FILE_NAME']
-    with open(nba_file_name, 'r') as f:
-        nba = yaml.safe_load(f)
+    working_dir = 'working'
+    os.mkdir(working_dir)
 
-    recording_nwb_file_name = nba['recording_nwb_file']
-    recording_electrical_series_path = nba['recording_electrical_series_path']
+    nwb_url = os.environ['INPUT_NWB_URL']
 
-    # get the nwb url
-    with open(recording_nwb_file_name, 'r') as f:
-        nwb_url = json.load(f)['url']
+    recording_electrical_series_path = '/acquisition/ElectricalSeries' # hard-coded for now
 
     # open the remote file
     disk_cache = remfile.DiskCache('/tmp/remfile_cache')
@@ -107,7 +104,8 @@ def main():
         # for now we hard-code neurosift.org
         url = f'{OUTPUT_BUCKET_BASE_URL}/neurobass-dev/{random_output_id}.nwb'
         out = {
-            'sorting_nwb_file': url
+            'output_file_url': url,
+            'output_file_size': os.path.getsize(sorting_fname)
         }
         with open('output/out.json', 'w') as f:
             json.dump(out, f)

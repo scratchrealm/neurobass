@@ -58,23 +58,6 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
     else if (request.property === 'consoleOutput') {
         update.consoleOutput = request.value
     }
-    else if (request.property.startsWith('outputFileId|')) {
-        const a = request.property.split('|')
-        if (a.length !== 3) {
-            throw new Error(`Invalid property: ${request.property}`)
-        }
-        const name = a[1]
-        const fileId = a[2]
-        update.outputFiles = job.outputFiles.map(x => {
-            if (x.name === name) {
-                return {
-                    ...x,
-                    fileId
-                }
-            }
-            else return x
-        })
-    }
     else {
         throw new Error(`Invalid property: ${request.property}`)
     }
@@ -84,6 +67,34 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
     }
     if (request.computeResourceNodeName) {
         update.computeResourceNodeName = request.computeResourceNodeName
+    }
+
+    if ((request.property === 'status') && (request.value === 'completed')) {
+        const filesCollection = client.db('neurobass').collection('files')
+
+        const newOutputFiles: {
+            name: string
+            fileName: string
+            fileId: string
+        }[] = []
+        const newOutputFileIds: string[] = []
+        for (const outputFile of job.outputFiles) {
+            const ff = removeIdField(await filesCollection.findOne({
+                projectId: request.projectId,
+                fileName: outputFile.fileName
+            }))
+            if (!ff) {
+                throw new Error(`Project output file does not exist: ${outputFile.fileName}`)
+            }
+            newOutputFiles.push({
+                name: outputFile.name,
+                fileName: outputFile.fileName,
+                fileId: ff.fileId
+            })
+            newOutputFileIds.push(ff.fileId)
+        }
+        update.outputFiles = newOutputFiles
+        update.outputFileIds = newOutputFileIds
     }
 
     const filter: {[key: string]: any} = {jobId: request.jobId}
@@ -101,6 +112,7 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
             throw new Error(`Invalid status: ${request.value}`)
         }
     }
+
     const x = await jobsCollection.updateOne(filter, {$set: update})
     if (x.modifiedCount === 0) {
         return {

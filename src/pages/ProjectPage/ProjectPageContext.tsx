@@ -1,8 +1,8 @@
 import React, { FunctionComponent, PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
-import { createScriptJob, deleteProject, cloneProject, deleteProjectFile, deleteCompletedScriptJobs, deleteScriptJob, fetchProject, fetchProjectFiles, fetchScriptJobsForProject, setProjectProperty, duplicateProjectFile, renameProjectFile } from '../../dbInterface/dbInterface';
+import { createJob, deleteProject, deleteFile, deleteCompletedJobs, deleteJob, fetchProject, fetchFiles, fetchJobsForProject, setProjectProperty, duplicateFile, renameFile } from '../../dbInterface/dbInterface';
 import { useGithubAuth } from '../../GithubAuth/useGithubAuth';
 import { onPubsubMessage } from '../../pubnub/pubnub';
-import { SPProject, SPProjectFile, SPScriptJob } from '../../types/neurobass-types';
+import { NBProject, NBFile, NBJob } from '../../types/neurobass-types';
 import yaml from 'js-yaml'
 
 type Props = {
@@ -108,15 +108,15 @@ const openTabsReducer = (state: OpenTabsState, action: OpenTabsAction) => {
 type ProjectPageContextType = {
     projectId: string
     workspaceId: string
-    project?: SPProject
-    projectFiles?: SPProjectFile[]
+    project?: NBProject
+    files?: NBFile[]
     openTabs: {
         tabName: string
         content?: string
         editedContent?: string
     }[]
     currentTabName?: string
-    scriptJobs?: SPScriptJob[]
+    jobs?: NBJob[]
     openTab: (tabName: string) => void
     closeTab: (tabName: string) => void
     closeAllTabs: () => void
@@ -125,12 +125,11 @@ type ProjectPageContextType = {
     setTabEditedContent: (tabName: string, editedContent: string) => void
     refreshFiles: () => void
     deleteProject: () => Promise<void>
-    cloneProject: (newWorkspaceId: string) => Promise<string>
     setProjectProperty: (property: 'name', value: any) => void
-    createScriptJob: (o: {scriptFileName: string}) => void
-    deleteScriptJob: (scriptJobId: string) => void
-    refreshScriptJobs: () => void
-    deleteCompletedScriptJobs: (o: {scriptFileName: string}) => void
+    createJob: (o: {scriptFileName: string}) => void
+    deleteJob: (jobId: string) => void
+    refreshJobs: () => void
+    deleteCompletedJobs: (o: {scriptFileName: string}) => void
     deleteFile: (fileName: string) => void
     duplicateFile: (fileName: string, newFileName: string) => void
     renameFile: (fileName: string, newFileName: string) => void
@@ -150,12 +149,11 @@ const ProjectPageContext = React.createContext<ProjectPageContextType>({
     setTabEditedContent: () => {},
     refreshFiles: () => {},
     deleteProject: async () => {},
-    cloneProject: async () => {return ''},
     setProjectProperty: () => {},
-    createScriptJob: () => {},
-    deleteScriptJob: () => {},
-    refreshScriptJobs: () => {},
-    deleteCompletedScriptJobs: () => {},
+    createJob: () => {},
+    deleteJob: () => {},
+    refreshJobs: () => {},
+    deleteCompletedJobs: () => {},
     deleteFile: () => {},
     duplicateFile: () => {},
     renameFile: () => {},
@@ -163,14 +161,14 @@ const ProjectPageContext = React.createContext<ProjectPageContextType>({
 })
 
 export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({children, projectId}) => {
-    const [project, setProject] = React.useState<SPProject | undefined>()
-    const [projectFiles, setProjectFiles] = React.useState<SPProjectFile[] | undefined>()
+    const [project, setProject] = React.useState<NBProject | undefined>()
+    const [files, setFiles] = React.useState<NBFile[] | undefined>()
     const [refreshFilesCode, setRefreshFilesCode] = React.useState(0)
     const refreshFiles = useCallback(() => setRefreshFilesCode(rfc => rfc + 1), [])
 
-    const [scriptJobs, setScriptJobs] = React.useState<SPScriptJob[] | undefined>(undefined)
-    const [refreshScriptJobsCode, setRefreshScriptJobsCode] = React.useState(0)
-    const refreshScriptJobs = useCallback(() => setRefreshScriptJobsCode(c => c + 1), [])
+    const [jobs, setJobs] = React.useState<NBJob[] | undefined>(undefined)
+    const [refreshJobsCode, setRefreshJobsCode] = React.useState(0)
+    const refreshJobs = useCallback(() => setRefreshJobsCode(c => c + 1), [])
 
     const [refreshProjectCode, setRefreshProjectCode] = React.useState(0)
     const refreshProject = useCallback(() => setRefreshProjectCode(rac => rac + 1), [])
@@ -191,54 +189,54 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
 
     useEffect(() => {
         (async () => {
-            setProjectFiles(undefined)
+            setFiles(undefined)
             if (!projectId) return
-            const af = await fetchProjectFiles(projectId, auth)
-            setProjectFiles(af)
+            const af = await fetchFiles(projectId, auth)
+            setFiles(af)
         })()
     }, [refreshFilesCode, projectId, auth])
 
     useEffect(() => {
         let canceled = false
         ;(async () => {
-            setScriptJobs(undefined)
+            setJobs(undefined)
             if (!projectId) return
-            const x = await fetchScriptJobsForProject(projectId, auth)
+            const x = await fetchJobsForProject(projectId, auth)
             if (canceled) return
-            setScriptJobs(x)
+            setJobs(x)
         })()
         return () => {canceled = true}
-    }, [refreshScriptJobsCode, projectId, auth])
+    }, [refreshJobsCode, projectId, auth])
 
-    // if any script jobs are newly completed, refresh the files
-    const [previousScriptJobs, setPreviousScriptJobs] = React.useState<SPScriptJob[] | undefined>(undefined)
+    // if any jobs are newly completed, refresh the files
+    const [previousJobs, setPreviousJobs] = React.useState<NBJob[] | undefined>(undefined)
     useEffect(() => {
-        if (!scriptJobs) return
-        if (previousScriptJobs) {
-            const newlyCompletedJobs = scriptJobs.filter(j => (
+        if (!jobs) return
+        if (previousJobs) {
+            const newlyCompletedJobs = jobs.filter(j => (
                 j.status === 'completed' && (
-                    !previousScriptJobs.find(pj => (pj.scriptJobId === j.scriptJobId) && pj.status === 'completed')
+                    !previousJobs.find(pj => (pj.jobId === j.jobId) && pj.status === 'completed')
                 )
             ))
             if (newlyCompletedJobs.length > 0) {
                 refreshFiles()
             }
         }
-        setPreviousScriptJobs(scriptJobs)
-    }, [scriptJobs, previousScriptJobs, refreshFiles])
+        setPreviousJobs(jobs)
+    }, [jobs, previousJobs, refreshFiles])
 
     useEffect(() => {
         const cancel = onPubsubMessage(message => {
-            if (message.type === 'scriptJobStatusChanged') {
+            if (message.type === 'jobStatusChanged') {
                 if (message.projectId === projectId) {
-                    refreshScriptJobs()
+                    refreshJobs()
                 }
             }
         })
         return () => {cancel()}
-    }, [projectId, refreshScriptJobs])
+    }, [projectId, refreshJobs])
 
-    const createScriptJobHandler = useCallback(async (o: {scriptFileName: string}) => {
+    const createJobHandler = useCallback(async (o: {scriptFileName: string}) => {
         if (!project) return
         const t = openTabs.openTabs.find(x => x.tabName === `file:${o.scriptFileName}`)
         if (!t) {
@@ -278,31 +276,25 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
             scriptFileName: o.scriptFileName,
             requiredResources
         }
-        await createScriptJob(project.workspaceId, projectId, oo, auth)
-        refreshScriptJobs()
-    }, [project, projectId, refreshScriptJobs, auth, openTabs])
+        await createJob(project.workspaceId, projectId, oo, auth)
+        refreshJobs()
+    }, [project, projectId, refreshJobs, auth, openTabs])
 
-    const deleteScriptJobHandler = useCallback(async (scriptJobId: string) => {
+    const deleteJobHandler = useCallback(async (jobId: string) => {
         if (!project) return
-        await deleteScriptJob(project.workspaceId, projectId, scriptJobId, auth)
-        refreshScriptJobs()
-    }, [project, projectId, refreshScriptJobs, auth])
+        await deleteJob(project.workspaceId, projectId, jobId, auth)
+        refreshJobs()
+    }, [project, projectId, refreshJobs, auth])
 
-    const deleteCompletedScriptJobsHandler = useCallback(async (o: {scriptFileName: string}) => {
+    const deleteCompletedJobsHandler = useCallback(async (o: {scriptFileName: string}) => {
         if (!project) return
-        await deleteCompletedScriptJobs(project.workspaceId, projectId, o.scriptFileName, auth)
-        refreshScriptJobs()
-    }, [project, projectId, refreshScriptJobs, auth])
+        await deleteCompletedJobs(project.workspaceId, projectId, o.scriptFileName, auth)
+        refreshJobs()
+    }, [project, projectId, refreshJobs, auth])
 
     const deleteProjectHandler = useMemo(() => (async () => {
         if (!project) return
         await deleteProject(project.workspaceId, projectId, auth)
-    }), [project, projectId, auth])
-
-    const cloneProjectHandler = useMemo(() => (async (newWorkspaceId: string) => {
-        if (!project) return '' // should not happen
-        const newProjectId = await cloneProject(project.workspaceId, projectId, newWorkspaceId, auth)
-        return newProjectId
     }), [project, projectId, auth])
 
     const setProjectPropertyHandler = useCallback(async (property: 'name', val: any) => {
@@ -312,19 +304,19 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
 
     const deleteFile = useCallback(async (fileName: string) => {
         if (!project) return
-        await deleteProjectFile(project.workspaceId, projectId, fileName, auth)
+        await deleteFile(project.workspaceId, projectId, fileName, auth)
         refreshFiles()
     }, [project, projectId, refreshFiles, auth])
 
     const duplicateFile = useCallback(async (fileName: string, newFileName: string) => {
         if (!project) return
-        await duplicateProjectFile(project.workspaceId, projectId, fileName, newFileName, auth)
+        await duplicateFile(project.workspaceId, projectId, fileName, newFileName, auth)
         refreshFiles()
     }, [project, projectId, refreshFiles, auth])
 
     const renameFile = useCallback(async (fileName: string, newFileName: string) => {
         if (!project) return
-        await renameProjectFile(project.workspaceId, projectId, fileName, newFileName, auth)
+        await renameFile(project.workspaceId, projectId, fileName, newFileName, auth)
         refreshFiles()
         openTabsDispatch({type: 'closeTab', tabName: `file:${fileName}`})
     }, [project, projectId, refreshFiles, auth])
@@ -339,10 +331,10 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
         projectId,
         workspaceId: project?.workspaceId ?? '',
         project,
-        projectFiles,
+        files,
         openTabs: openTabs.openTabs,
         currentTabName: openTabs.currentTabName,
-        scriptJobs,
+        jobs,
         openTab: (tabName: string) => openTabsDispatch({type: 'openTab', tabName}),
         closeTab: (tabName: string) => openTabsDispatch({type: 'closeTab', tabName}),
         closeAllTabs: () => openTabsDispatch({type: 'closeAllTabs'}),
@@ -351,17 +343,16 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
         setTabEditedContent: (tabName: string, editedContent: string) => openTabsDispatch({type: 'setTabEditedContent', tabName, editedContent}),
         refreshFiles,
         deleteProject: deleteProjectHandler,
-        cloneProject: cloneProjectHandler,
         setProjectProperty: setProjectPropertyHandler,
-        refreshScriptJobs,
-        createScriptJob: createScriptJobHandler,
-        deleteScriptJob: deleteScriptJobHandler,
-        deleteCompletedScriptJobs: deleteCompletedScriptJobsHandler,
+        refreshJobs,
+        createJob: createJobHandler,
+        deleteJob: deleteJobHandler,
+        deleteCompletedJobs: deleteCompletedJobsHandler,
         deleteFile,
         duplicateFile,
         renameFile,
         fileHasBeenEdited
-    }), [project, projectFiles, projectId, refreshFiles, openTabs, deleteProjectHandler, cloneProjectHandler, setProjectPropertyHandler, refreshScriptJobs, scriptJobs, createScriptJobHandler, deleteScriptJobHandler, deleteCompletedScriptJobsHandler, deleteFile, duplicateFile, renameFile, fileHasBeenEdited])
+    }), [project, files, projectId, refreshFiles, openTabs, deleteProjectHandler, setProjectPropertyHandler, refreshJobs, jobs, createJobHandler, deleteJobHandler, deleteCompletedJobsHandler, deleteFile, duplicateFile, renameFile, fileHasBeenEdited])
 
     return (
         <ProjectPageContext.Provider value={value}>

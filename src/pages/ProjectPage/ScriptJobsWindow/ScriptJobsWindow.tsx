@@ -3,7 +3,7 @@ import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import SmallIconButton from "../../../components/SmallIconButton";
 import { useWorkspace } from "../../WorkspacePage/WorkspacePageContext";
 import { useProject } from "../ProjectPageContext";
-import ScriptJobsTable from "./ScriptJobsTable";
+import JobsTable from "./JobsTable";
 
 type Props = {
     width: number,
@@ -13,18 +13,18 @@ type Props = {
 
 const queryParams = parseQuery(window.location.href)
 
-const ScriptJobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
+const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
     const {workspaceRole} = useWorkspace()
-    const {refreshScriptJobs, createScriptJob, deleteCompletedScriptJobs, scriptJobs, openTabs} = useProject()
+    const {refreshJobs, createJob, deleteCompletedJobs, jobs, openTabs} = useProject()
 
     const handleCreateJob = useCallback(async () => {
-        createScriptJob({scriptFileName: fileName})
-    }, [createScriptJob, fileName])
+        createJob({scriptFileName: fileName})
+    }, [createJob, fileName])
 
     const [createJobTitle, setCreateJobTitle] = useState('Run script')
 
     const canCreateJob = useMemo(() => {
-        if (!scriptJobs) return false // not loaded yet
+        if (!jobs) return false // not loaded yet
         const openTab = openTabs.find(t => t.tabName === `file:${fileName}`)
         if (!openTab) {
             setCreateJobTitle('Unable to find open tab')
@@ -38,8 +38,8 @@ const ScriptJobsWindow: FunctionComponent<Props> = ({ width, height, fileName })
             setCreateJobTitle('File has unsaved changes')
             return false
         }
-        const pendingJob = scriptJobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'pending'))
-        const runningJob = scriptJobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'running'))
+        const pendingJob = jobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'pending'))
+        const runningJob = jobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'running'))
         if ((pendingJob) || (runningJob)) {
             if (!(queryParams['test'] === '1')) {
                 setCreateJobTitle('A job is already pending or running for this script.')
@@ -54,13 +54,13 @@ const ScriptJobsWindow: FunctionComponent<Props> = ({ width, height, fileName })
             setCreateJobTitle('You do not have permission to run scripts for this project.')
         }
         return false
-    }, [workspaceRole, scriptJobs, fileName, openTabs])
+    }, [workspaceRole, jobs, fileName, openTabs])
 
     const handleDeleteCompletedJobs = useCallback(async () => {
         const okay = await confirm('Delete all completed or failed jobs?')
         if (!okay) return
-        deleteCompletedScriptJobs({scriptFileName: fileName})
-    }, [deleteCompletedScriptJobs, fileName])
+        deleteCompletedJobs({scriptFileName: fileName})
+    }, [deleteCompletedJobs, fileName])
 
     const iconFontSize = 20
 
@@ -78,7 +78,7 @@ const ScriptJobsWindow: FunctionComponent<Props> = ({ width, height, fileName })
                 &nbsp;&nbsp;&nbsp;&nbsp;
                 <SmallIconButton
                     icon={<Refresh />}
-                    onClick={refreshScriptJobs}
+                    onClick={refreshJobs}
                     title="Refresh jobs"
                     label="Refresh"
                     fontSize={iconFontSize}
@@ -92,7 +92,7 @@ const ScriptJobsWindow: FunctionComponent<Props> = ({ width, height, fileName })
                     fontSize={iconFontSize}
                 />
             </div>
-            <ScriptJobsTable
+            <JobsTable
                 fileName={fileName}
             />
         </>
@@ -111,4 +111,4 @@ function parseQuery(queryString: string) {
     return query;
 }
 
-export default ScriptJobsWindow
+export default JobsWindow

@@ -1,5 +1,5 @@
 import { CreateWorkspaceRequest, CreateWorkspaceResponse } from "../../src/types/NeurobassRequest";
-import { SPWorkspace } from "../../src/types/neurobass-types";
+import { NBWorkspace } from "../../src/types/neurobass-types";
 import createRandomId from "../createRandomId";
 import { getMongoClient } from "../getMongoClient";
 import { userCanCreateWorkspace } from "../permissions";
@@ -16,7 +16,7 @@ const createWorkspaceHandler = async (request: CreateWorkspaceRequest, o: {verif
 
     const workspaceId = createRandomId(8)
 
-    const workspace: SPWorkspace = {
+    const workspace: NBWorkspace = {
         workspaceId,
         ownerId: verifiedUserId,
         name: request.name,

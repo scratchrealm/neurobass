@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { createWorkspace, fetchWorkspaces } from './dbInterface/dbInterface';
 import { useGithubAuth } from './GithubAuth/useGithubAuth';
-import { SPWorkspace } from './types/neurobass-types';
+import { NBWorkspace } from './types/neurobass-types';
 
 
 type SPMainContextType = {
-    workspaces?: SPWorkspace[]
+    workspaces?: NBWorkspace[]
     createWorkspace: (workspaceName: string) => Promise<string>
     refreshWorkspaces: () => void
 }
@@ -13,7 +13,7 @@ type SPMainContextType = {
 const SPMainContext = React.createContext<SPMainContextType>({workspaces: [], createWorkspace: async () => {return ''}, refreshWorkspaces: () => {}})
 
 export const SetupSPMain = (props: {children: React.ReactNode}) => {
-    const [workspaces, setWorkspaces] = React.useState<SPWorkspace[] | undefined>(undefined)
+    const [workspaces, setWorkspaces] = React.useState<NBWorkspace[] | undefined>(undefined)
     const [refreshCode, setRefreshCode] = React.useState(0)
     const refreshWorkspaces = useCallback(() => setRefreshCode(rc => rc + 1), [])
 

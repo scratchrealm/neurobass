@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { deleteProjectFile, fetchProjectFile, fetchDataBlob, setProjectFileContent } from "../../../dbInterface/dbInterface"
+import { deleteFile, fetchFile, fetchDataBlob, setFileContent } from "../../../dbInterface/dbInterface"
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth"
 
 // this file to be deleted
 
-const useProjectFile = (workspaceId: string, projectId: string, fileName: string) => {
+const useFile = (workspaceId: string, projectId: string, fileName: string) => {
     const [refreshCode, setRefreshCode] = useState<number>(0)
     const [fileContent, setFileContent] = useState<string | undefined>(undefined)
 
@@ -16,7 +16,7 @@ const useProjectFile = (workspaceId: string, projectId: string, fileName: string
         setFileContent(undefined)
         ;(async () => {
             if (!projectId) return
-            const af = await fetchProjectFile(projectId, fileName, auth)
+            const af = await fetchFile(projectId, fileName, auth)
             if (canceled) return
             if (!af) return
             const x = await fetchDataBlob(af.workspaceId, projectId, af.contentSha1, auth)
@@ -32,7 +32,7 @@ const useProjectFile = (workspaceId: string, projectId: string, fileName: string
             console.warn('No workspace ID')
             return
         }
-        await setProjectFileContent(workspaceId, projectId, fileName, fileContent, auth)
+        await setFileContent(workspaceId, projectId, fileName, fileContent, auth)
         setRefreshCode(rc => rc + 1)
     }, [workspaceId, projectId, fileName, auth])
 
@@ -41,7 +41,7 @@ const useProjectFile = (workspaceId: string, projectId: string, fileName: string
             console.warn('No workspace ID')
             return
         }
-        await deleteProjectFile(workspaceId, projectId, fileName, auth)
+        await deleteFile(workspaceId, projectId, fileName, auth)
     }), [workspaceId, projectId, fileName, auth])
 
     return {
@@ -51,4 +51,4 @@ const useProjectFile = (workspaceId: string, projectId: string, fileName: string
     }
 }
 
-export default useProjectFile
+export default useFile

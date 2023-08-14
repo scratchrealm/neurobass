@@ -1,10 +1,11 @@
-import { DeleteScriptJobRequest, DeleteScriptJobResponse } from "../../src/types/NeurobassRequest";
+import { DeleteJobRequest, DeleteJobResponse } from "../../src/types/NeurobassRequest";
 import getProject from "../getProject";
 import { getMongoClient } from "../getMongoClient";
 import getWorkspace from "../getWorkspace";
 import getWorkspaceRole from "../getWorkspaceRole";
+import { cleanupProject } from "./deleteFileHandler";
 
-const deleteScriptJobHandler = async (request: DeleteScriptJobRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<DeleteScriptJobResponse> => {
+const deleteJobHandler = async (request: DeleteJobRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<DeleteJobResponse> => {
     const {verifiedUserId} = o
 
     const client = await getMongoClient()
@@ -13,7 +14,7 @@ const deleteScriptJobHandler = async (request: DeleteScriptJobRequest, o: {verif
     const workspaceRole = getWorkspaceRole(workspace, verifiedUserId)
     const okay = workspaceRole === 'admin' || workspaceRole === 'editor'
     if (!okay) {
-        throw new Error('User does not have permission to delete a script job in this workspace')
+        throw new Error('User does not have permission to delete a job in this workspace')
     }
 
     const project = await getProject(request.projectId, {useCache: false})
@@ -22,8 +23,8 @@ const deleteScriptJobHandler = async (request: DeleteScriptJobRequest, o: {verif
         throw new Error('Incorrect workspace ID')
     }
 
-    const scriptJobsCollection = client.db('neurobass').collection('scriptJobs')
-    await scriptJobsCollection.deleteOne({scriptJobId: request.scriptJobId})
+    const jobsCollection = client.db('neurobass').collection('jobs')
+    await jobsCollection.deleteOne({jobId: request.jobId})
 
     const projectsCollection = client.db('neurobass').collection('projects')
     await projectsCollection.updateOne({projectId: request.projectId}, {$set: {timestampModified: Date.now() / 1000}})
@@ -31,9 +32,11 @@ const deleteScriptJobHandler = async (request: DeleteScriptJobRequest, o: {verif
     const workspacesCollection = client.db('neurobass').collection('workspaces')
     await workspacesCollection.updateOne({workspaceId: request.workspaceId}, {$set: {timestampModified: Date.now() / 1000}})
 
+    await cleanupProject(request.projectId)
+
     return {
-        type: 'deleteScriptJob'
+        type: 'deleteJob'
     }
 }
 
-export default deleteScriptJobHandler
+export default deleteJobHandler

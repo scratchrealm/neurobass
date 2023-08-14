@@ -1,5 +1,5 @@
 import { GetWorkspacesRequest, GetWorkspacesResponse } from "../../src/types/NeurobassRequest";
-import { isSPWorkspace, SPWorkspace } from "../../src/types/neurobass-types";
+import { isNBWorkspace, NBWorkspace } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import removeIdField from "../removeIdField";
 
@@ -9,9 +9,9 @@ const getWorkspacesHandler = async (request: GetWorkspacesRequest, o: {verifiedC
     const userId = o.verifiedUserId
     
     const workspaces = removeIdField(await workspacesCollection.find({}).toArray())
-    const workspaces2: SPWorkspace[] = []
+    const workspaces2: NBWorkspace[] = []
     for (const workspace of workspaces) {
-        if (!isSPWorkspace(workspace)) {
+        if (!isNBWorkspace(workspace)) {
             console.warn(workspace)
 
             // // one-off fix

@@ -1,5 +1,5 @@
 import { GetDataBlobRequest, GetDataBlobResponse } from "../../src/types/NeurobassRequest";
-import { isSPDataBlob } from "../../src/types/neurobass-types";
+import { isNBDataBlob } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import removeIdField from "../removeIdField";
 
@@ -21,7 +21,7 @@ const getDataBlobHandler = async (request: GetDataBlobRequest, o: {verifiedClien
     if (!dataBlob) {
         throw Error('Data blob not found')
     }
-    if (!isSPDataBlob(dataBlob)) {
+    if (!isNBDataBlob(dataBlob)) {
         console.warn(dataBlob)
         throw new Error('Invalid data blob in database')
     }

@@ -1,11 +1,12 @@
-import { DuplicateProjectFileRequest, DuplicateProjectFileResponse } from "../../src/types/NeurobassRequest";
+import { DuplicateFileRequest, DuplicateFileResponse } from "../../src/types/NeurobassRequest";
+import createRandomId from "../createRandomId";
 import { getMongoClient } from "../getMongoClient";
 import getProject from '../getProject';
 import getWorkspace from '../getWorkspace';
 import getWorkspaceRole from "../getWorkspaceRole";
 import removeIdField from "../removeIdField";
 
-const duplicateProjectFileHandler = async (request: DuplicateProjectFileRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<DuplicateProjectFileResponse> => {
+const duplicateFileHandler = async (request: DuplicateFileRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<DuplicateFileResponse> => {
     const {verifiedUserId} = o
 
     const projectId = request.projectId
@@ -24,33 +25,35 @@ const duplicateProjectFileHandler = async (request: DuplicateProjectFileRequest,
         throw new Error('User does not have permission to duplicate a project file in this workspace')
     }
 
-    const projectFilesCollection = client.db('neurobass').collection('projectFiles')
+    const filesCollection = client.db('neurobass').collection('files')
 
-    const projectFile = removeIdField(await projectFilesCollection.findOne({
+    const file = removeIdField(await filesCollection.findOne({
         projectId,
         fileName: request.fileName
     }))
-    if (!projectFile) {
+    if (!file) {
         throw new Error('Project file does not exist')
     }
 
-    const existingProjectFile = await projectFilesCollection.findOne({
+    const existingFile = await filesCollection.findOne({
         projectId,
         fileName: request.newFileName
     })
-    if (existingProjectFile) {
+    if (existingFile) {
         throw new Error('Project file already exists')
     }
 
-    await projectFilesCollection.insertOne({
-        ...projectFile,
+    await filesCollection.insertOne({
+        ...file,
         fileName: request.newFileName,
-        timestampModified: Date.now() / 1000
+        fileId: createRandomId(8),
+        jobId: undefined,
+        timestampCreated: Date.now() / 1000
     })
     
     return {
-        type: 'duplicateProjectFile'
+        type: 'duplicateFile'
     }
 }
 
-export default duplicateProjectFileHandler
+export default duplicateFileHandler

@@ -1,11 +1,12 @@
-import { RenameProjectFileRequest, RenameProjectFileResponse } from "../../src/types/NeurobassRequest";
+import { isNBFile } from "../../src/types/neurobass-types";
+import { RenameFileRequest, RenameFileResponse } from "../../src/types/NeurobassRequest";
 import { getMongoClient } from "../getMongoClient";
 import getProject from '../getProject';
 import getWorkspace from '../getWorkspace';
 import getWorkspaceRole from "../getWorkspaceRole";
 import removeIdField from "../removeIdField";
 
-const renameProjectFileHandler = async (request: RenameProjectFileRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<RenameProjectFileResponse> => {
+const renameFileHandler = async (request: RenameFileRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<RenameFileResponse> => {
     const {verifiedUserId} = o
 
     const projectId = request.projectId
@@ -24,25 +25,32 @@ const renameProjectFileHandler = async (request: RenameProjectFileRequest, o: {v
         throw new Error('User does not have permission to rename a project file in this workspace')
     }
 
-    const projectFilesCollection = client.db('neurobass').collection('projectFiles')
+    const filesCollection = client.db('neurobass').collection('files')
 
-    const projectFile = removeIdField(await projectFilesCollection.findOne({
+    const file = removeIdField(await filesCollection.findOne({
         projectId,
         fileName: request.fileName
     }))
-    if (!projectFile) {
+    if (!file) {
         throw new Error('Project file does not exist')
     }
+    if (!isNBFile(file)) {
+        console.warn(file)
+        throw new Error('Invalid file in database')
+    }
+    if (file.jobId) {
+        throw Error('Cannot rename a file that is the output of a job.')
+    }
 
-    const existingProjectFile = await projectFilesCollection.findOne({
+    const existingFile = await filesCollection.findOne({
         projectId,
         fileName: request.newFileName
     })
-    if (existingProjectFile) {
+    if (existingFile) {
         throw new Error('Project file already exists')
     }
 
-    await projectFilesCollection.updateOne({
+    await filesCollection.updateOne({
         projectId,
         fileName: request.fileName
     }, {
@@ -52,8 +60,8 @@ const renameProjectFileHandler = async (request: RenameProjectFileRequest, o: {v
     })
     
     return {
-        type: 'renameProjectFile'
+        type: 'renameFile'
     }
 }
 
-export default renameProjectFileHandler
+export default renameFileHandler

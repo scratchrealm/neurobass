@@ -1,23 +1,23 @@
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
 import ComputeResourceIdComponent from "../../../ComputeResourceIdComponent";
-import { fetchScriptJob } from "../../../dbInterface/dbInterface";
+import { fetchJob } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
-import { GetScriptJobRequest } from "../../../types/NeurobassRequest";
-import { SPScriptJob } from "../../../types/neurobass-types";
+import { GetJobRequest } from "../../../types/NeurobassRequest";
+import { NBJob } from "../../../types/neurobass-types";
 import UserIdComponent from "../../../UserIdComponent";
 import { useProject } from "../ProjectPageContext";
 
 type Props = {
     width: number,
     height: number,
-    scriptJobId: string
+    jobId: string
 }
 
-const useScriptJob = (workspaceId: string, projectId: string, scriptJobId: string) => {
-    const [scriptJob, setScriptJob] = useState<SPScriptJob | undefined>()
+const useJob = (workspaceId: string, projectId: string, jobId: string) => {
+    const [job, setJob] = useState<NBJob | undefined>()
 
     const [refreshCode, setRefreshCode] = useState(0)
-    const refreshScriptJob = useCallback(() => {
+    const refreshJob = useCallback(() => {
         setRefreshCode(rc => rc + 1)
     }, [])
 
@@ -27,24 +27,24 @@ const useScriptJob = (workspaceId: string, projectId: string, scriptJobId: strin
     useEffect(() => {
         let canceled = false
         ;(async () => {
-            setScriptJob(undefined)
-            const scriptJob = await fetchScriptJob(workspaceId, projectId, scriptJobId, auth)
+            setJob(undefined)
+            const job = await fetchJob(workspaceId, projectId, jobId, auth)
             if (canceled) return
-            setScriptJob(scriptJob)
+            setJob(job)
         })()
         return () => {
             canceled = true
         }
-    }, [workspaceId, projectId, scriptJobId, auth, refreshCode])
-    return {scriptJob, refreshScriptJob}
+    }, [workspaceId, projectId, jobId, auth, refreshCode])
+    return {job, refreshJob}
 }
 
-const ScriptJobView: FunctionComponent<Props> = ({ width, height, scriptJobId }) => {
+const JobView: FunctionComponent<Props> = ({ width, height, jobId }) => {
     const {workspaceId, projectId} = useProject()
-    const {scriptJob, refreshScriptJob} = useScriptJob(workspaceId, projectId, scriptJobId)
-    if (!scriptJob) {
+    const {job, refreshJob} = useJob(workspaceId, projectId, jobId)
+    if (!job) {
         return (
-            <p>Loading script job {scriptJobId}</p>
+            <p>Loading job {jobId}</p>
         )
     }
     return (
@@ -53,48 +53,48 @@ const ScriptJobView: FunctionComponent<Props> = ({ width, height, scriptJobId })
             <table className="table1">
                 <tbody>
                     <tr>
-                        <td>Script job ID:</td>
-                        <td>{scriptJob.scriptJobId}</td>
+                        <td>Job ID:</td>
+                        <td>{job.jobId}</td>
                     </tr>
                     <tr>
                         <td>User</td>
-                        <td><UserIdComponent userId={scriptJob.userId} /></td>
+                        <td><UserIdComponent userId={job.userId} /></td>
                     </tr>
                     <tr>
                         <td>Script file name:</td>
-                        <td>{scriptJob.scriptFileName}</td>
+                        <td>{job.scriptFileName}</td>
                     </tr>
                     <tr>
                         <td>Compute resource:</td>
-                        <td><ComputeResourceIdComponent computeResourceId={scriptJob.computeResourceId} link={true} /></td>
+                        <td><ComputeResourceIdComponent computeResourceId={job.computeResourceId} link={true} /></td>
                     </tr>
                     <tr>
                         <td>Node:</td>
-                        <td>{scriptJob.computeResourceNodeId ? `${scriptJob.computeResourceNodeName} (${scriptJob.computeResourceNodeId})`: ''}</td>
+                        <td>{job.computeResourceNodeId ? `${job.computeResourceNodeName} (${job.computeResourceNodeId})`: ''}</td>
                     </tr>
                     <tr>
                         <td>Job status:</td>
-                        <td>{scriptJob.status}</td>
+                        <td>{job.status}</td>
                     </tr>
                     <tr>
                         <td>Error:</td>
-                        <td style={{color: 'red'}}>{scriptJob.error}</td>
+                        <td style={{color: 'red'}}>{job.error}</td>
                     </tr>
                     <tr>
                         <td>Elapsed time (sec)</td>
-                        <td>{scriptJob.elapsedTimeSec}</td>
+                        <td>{job.elapsedTimeSec}</td>
                     </tr>
                 </tbody>
             </table>
             <hr />
-            <button onClick={refreshScriptJob}>Refresh</button>
+            <button onClick={refreshJob}>Refresh</button>
             <hr />
             <h3>Console output</h3>
             <pre>
-                {scriptJob.consoleOutput}
+                {job.consoleOutput}
             </pre>
         </div>
     )
 }
 
-export default ScriptJobView
+export default JobView

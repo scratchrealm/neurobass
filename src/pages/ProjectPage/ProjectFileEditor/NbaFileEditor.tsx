@@ -188,10 +188,10 @@ const NbaFileEditor: FunctionComponent<Props> = ({width, height, text, onSetText
 }
 
 const NwbFileSelector: FunctionComponent<{value?: string, onChange: (value: string) => void}> = ({value, onChange}) => {
-    const {projectFiles} = useProject()
+    const {files} = useProject()
     const nwbFiles = useMemo(() => (
-        (projectFiles || []).filter(f => f.fileName.endsWith('.nwb'))
-    ), [projectFiles])
+        (files || []).filter(f => f.fileName.endsWith('.nwb'))
+    ), [files])
     return (
         <select value={value} onChange={e => onChange(e.target.value)}>
             <option value="">Select a nwb file</option>

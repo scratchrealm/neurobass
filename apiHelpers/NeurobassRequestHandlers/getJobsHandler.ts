@@ -1,16 +1,16 @@
-import { GetScriptJobsRequest, GetScriptJobsResponse } from "../../src/types/NeurobassRequest";
-import { isSPScriptJob } from "../../src/types/neurobass-types";
+import { GetJobsRequest, GetJobsResponse } from "../../src/types/NeurobassRequest";
+import { isNBJob } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import removeIdField from "../removeIdField";
 
-const getScriptJobsHandler = async (request: GetScriptJobsRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<GetScriptJobsResponse> => {
+const getJobsHandler = async (request: GetJobsRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<GetJobsResponse> => {
     // must provide either computeResourceId or projectId
     if (!request.computeResourceId && !request.projectId) {
         throw new Error('No computeResourceId or projectId provided')
     }
 
     const client = await getMongoClient()
-    const scriptJobsCollection = client.db('neurobass').collection('scriptJobs')
+    const jobsCollection = client.db('neurobass').collection('jobs')
 
     const filter: {[k: string]: any} = {}
     if (request.computeResourceId) {
@@ -23,18 +23,18 @@ const getScriptJobsHandler = async (request: GetScriptJobsRequest, o: {verifiedC
         filter['projectId'] = request.projectId
     }
 
-    const scriptJobs = removeIdField(await scriptJobsCollection.find(filter).toArray())
-    for (const scriptJob of scriptJobs) {
-        if (!isSPScriptJob(scriptJob)) {
-            console.warn(JSON.stringify(scriptJob, null, 2))
-            console.warn('Invalid script job in database (0)')
+    const jobs = removeIdField(await jobsCollection.find(filter).toArray())
+    for (const job of jobs) {
+        if (!isNBJob(job)) {
+            console.warn(JSON.stringify(job, null, 2))
+            console.warn('Invalid job in database (0)')
 
-            // // one-off correction, delete invalid script job
-            // await scriptJobsCollection.deleteOne({
-            //     scriptJobId: scriptJob.scriptJobId
+            // // one-off correction, delete invalid job
+            // await jobsCollection.deleteOne({
+            //     jobId: job.jobId
             // })
 
-            throw new Error('Invalid script job in database (0)')
+            throw new Error('Invalid job in database (0)')
         }
     }
 
@@ -56,9 +56,9 @@ const getScriptJobsHandler = async (request: GetScriptJobsRequest, o: {verifiedC
     }
 
     return {
-        type: 'getScriptJobs',
-        scriptJobs
+        type: 'getJobs',
+        jobs
     }
 }
 
-export default getScriptJobsHandler
+export default getJobsHandler

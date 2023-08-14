@@ -1,5 +1,5 @@
 import { GetProjectsRequest, GetProjectsResponse } from "../../src/types/NeurobassRequest";
-import { isSPProject, SPProject } from "../../src/types/neurobass-types";
+import { isNBProject, NBProject } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import getWorkspace from "../getWorkspace";
 import { userCanReadWorkspace } from "../permissions";
@@ -18,13 +18,13 @@ const getProjectsHandler = async (request: GetProjectsRequest, o: {verifiedClien
         workspaceId: request.workspaceId
     }).toArray())
     for (const project of projects) {
-        if (!isSPProject(project)) {
+        if (!isNBProject(project)) {
             console.warn(project)
             throw new Error('Invalid project in database')
         }
     }
     // sort projects by name
-    (projects as SPProject[]).sort((p1, p2) => (
+    (projects as NBProject[]).sort((p1, p2) => (
         p1.name.localeCompare(p2.name)
     ))
     return {

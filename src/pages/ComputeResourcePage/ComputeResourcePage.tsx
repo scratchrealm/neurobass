@@ -3,9 +3,9 @@ import ComputeResourceIdComponent from "../../ComputeResourceIdComponent";
 import { fetchComputeResource } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import { timeAgoString } from "../../timeStrings";
-import { SPComputeResource } from "../../types/neurobass-types";
+import { NBComputeResource } from "../../types/neurobass-types";
 import UserIdComponent from "../../UserIdComponent";
-import ComputeResourceScriptJobsTable from "./ComputeResourceScriptJobsTable";
+import ComputeResourceJobsTable from "./ComputeResourceJobsTable";
 
 type Props = {
     width: number
@@ -14,7 +14,7 @@ type Props = {
 }
 
 const ComputeResourcesPage: FunctionComponent<Props> = ({width, height, computeResourceId}) => {
-    const [computeResource, setComputeResources] = useState<SPComputeResource>()
+    const [computeResource, setComputeResources] = useState<NBComputeResource>()
 
     const {accessToken, userId} = useGithubAuth()
     const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
@@ -57,7 +57,7 @@ const ComputeResourcesPage: FunctionComponent<Props> = ({width, height, computeR
             <hr />
             <p>Full ID: {computeResource?.computeResourceId}</p>
             <hr />
-            <ComputeResourceScriptJobsTable
+            <ComputeResourceJobsTable
                 computeResourceId={computeResourceId}
             />
         </div>

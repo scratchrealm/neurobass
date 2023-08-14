@@ -1,9 +1,9 @@
-import { isSPProject, SPProject } from "../src/types/neurobass-types"
+import { isNBProject, NBProject } from "../src/types/neurobass-types"
 import { getMongoClient } from "./getMongoClient"
 import ObjectCache from "./ObjectCache"
 import removeIdField from "./removeIdField"
 
-const projectCache = new ObjectCache<SPProject>(1000 * 60 * 1)
+const projectCache = new ObjectCache<NBProject>(1000 * 60 * 1)
 
 const getProject = async (projectId: string, o: {useCache: boolean}) => {
     if (o.useCache) {
@@ -18,7 +18,7 @@ const getProject = async (projectId: string, o: {useCache: boolean}) => {
     if (!project) {
         throw new Error('Project not found')
     }
-    if (!isSPProject(project)) {
+    if (!isNBProject(project)) {
         console.warn(project)
         throw new Error('Invalid projects in database')
     }

@@ -1,39 +1,37 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
 import githubVerifyAccessToken from '../apiHelpers/githubVerifyAccessToken'
 import JSONStringifyDeterminsitic from '../apiHelpers/jsonStringifyDeterministic'
-import cloneProjectHandler from '../apiHelpers/NeurobassRequestHandlers/cloneProjectHandler'
 import createProjectHandler from '../apiHelpers/NeurobassRequestHandlers/createProjectHandler'
-import createScriptJobHandler from '../apiHelpers/NeurobassRequestHandlers/createScriptJobHandler'
+import createJobHandler from '../apiHelpers/NeurobassRequestHandlers/createJobHandler'
 import createWorkspaceHandler from '../apiHelpers/NeurobassRequestHandlers/createWorkspaceHandler'
-import deleteCompletedScriptJobsHandler from '../apiHelpers/NeurobassRequestHandlers/deleteCompletedScriptJobsHandler'
 import deleteComputeResourceHandler from '../apiHelpers/NeurobassRequestHandlers/deleteComputeResourceHandler'
-import deleteProjectFileHandler from '../apiHelpers/NeurobassRequestHandlers/deleteProjectFileHandler'
+import deleteFileHandler from '../apiHelpers/NeurobassRequestHandlers/deleteFileHandler'
 import deleteProjectHandler from '../apiHelpers/NeurobassRequestHandlers/deleteProjectHandler'
-import deleteScriptJobHandler from '../apiHelpers/NeurobassRequestHandlers/deleteScriptJobHandler'
+import deleteJobHandler from '../apiHelpers/NeurobassRequestHandlers/deleteJobHandler'
 import deleteWorkspaceHandler from '../apiHelpers/NeurobassRequestHandlers/deleteWorkspaceHandler'
-import duplicateProjectFileHandler from '../apiHelpers/NeurobassRequestHandlers/duplicateProjectFileHandler'
+import duplicateFileHandler from '../apiHelpers/NeurobassRequestHandlers/duplicateFileHandler'
 import getComputeResourcesHandler from '../apiHelpers/NeurobassRequestHandlers/getComputeResourcesHandler'
 import getComputeResourceHandler from '../apiHelpers/NeurobassRequestHandlers/getComputeResourceHandler'
 import getDataBlobHandler from '../apiHelpers/NeurobassRequestHandlers/getDataBlobHandler'
 import getActiveComputeResourceNodesHandler from '../apiHelpers/NeurobassRequestHandlers/getActiveComputeResourceNodesHandler'
-import getProjectFileHandler from '../apiHelpers/NeurobassRequestHandlers/getProjectFileHandler'
-import getProjectFilesHandler from '../apiHelpers/NeurobassRequestHandlers/getProjectFilesHandler'
+import getFileHandler from '../apiHelpers/NeurobassRequestHandlers/getFileHandler'
+import getFilesHandler from '../apiHelpers/NeurobassRequestHandlers/getFilesHandler'
 import getProjectHandler from '../apiHelpers/NeurobassRequestHandlers/getProjectHandler'
 import getProjectsHandler from '../apiHelpers/NeurobassRequestHandlers/getProjectsHandler'
-import getScriptJobHandler from '../apiHelpers/NeurobassRequestHandlers/getScriptJobHandler'
-import getScriptJobsHandler from '../apiHelpers/NeurobassRequestHandlers/getScriptJobsHandler'
+import getJobHandler from '../apiHelpers/NeurobassRequestHandlers/getJobHandler'
+import getJobsHandler from '../apiHelpers/NeurobassRequestHandlers/getJobsHandler'
 import getWorkspaceHandler from '../apiHelpers/NeurobassRequestHandlers/getWorkspaceHandler'
 import getWorkspacesHandler from '../apiHelpers/NeurobassRequestHandlers/getWorkspacesHandler'
 import registerComputeResourceHandler from '../apiHelpers/NeurobassRequestHandlers/registerComputeResourceHandler'
-import renameProjectFileHandler from '../apiHelpers/NeurobassRequestHandlers/renameProjectFileHandler'
-import setProjectFileHandler from '../apiHelpers/NeurobassRequestHandlers/setProjectFileHandler'
+import renameFileHandler from '../apiHelpers/NeurobassRequestHandlers/renameFileHandler'
+import setFileHandler from '../apiHelpers/NeurobassRequestHandlers/setFileHandler'
 import setProjectPropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setProjectPropertyHandler'
-import setScriptJobPropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setScriptJobPropertyHandler'
+import setJobPropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setJobPropertyHandler'
 import setWorkspacePropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setWorkspacePropertyHandler'
 import setWorkspaceUsersHandler from '../apiHelpers/NeurobassRequestHandlers/setWorkspaceUsersHandler'
 import getPubsubSubscriptionHandler from '../apiHelpers/NeurobassRequestHandlers/getPubsubSubscriptionHandler'
 import verifySignature from '../apiHelpers/verifySignature'
-import { isCloneProjectRequest, isCreateProjectRequest, isCreateScriptJobRequest, isCreateWorkspaceRequest, isDeleteCompletedScriptJobsRequest, isDeleteComputeResourceRequest, isDeleteProjectFileRequest, isDeleteProjectRequest, isDeleteScriptJobRequest, isDeleteWorkspaceRequest, isDuplicateProjectFileRequest, isGetActiveComputeResourceNodesRequest, isGetComputeResourceRequest, isGetComputeResourcesRequest, isGetDataBlobRequest, isGetScriptJobsRequest, isGetProjectFileRequest, isGetProjectFilesRequest, isGetProjectRequest, isGetProjectsRequest, isGetPubsubSubscriptionRequest, isGetScriptJobRequest, isGetWorkspaceRequest, isGetWorkspacesRequest, isNeurobassRequest, isRegisterComputeResourceRequest, isRenameProjectFileRequest, isSetProjectFileRequest, isSetProjectPropertyRequest, isSetScriptJobPropertyRequest, isSetWorkspacePropertyRequest, isSetWorkspaceUsersRequest } from '../src/types/NeurobassRequest'
+import { isCreateProjectRequest, isCreateJobRequest, isCreateWorkspaceRequest, isDeleteComputeResourceRequest, isDeleteFileRequest, isDeleteProjectRequest, isDeleteJobRequest, isDeleteWorkspaceRequest, isDuplicateFileRequest, isGetActiveComputeResourceNodesRequest, isGetComputeResourceRequest, isGetComputeResourcesRequest, isGetDataBlobRequest, isGetJobsRequest, isGetFileRequest, isGetFilesRequest, isGetProjectRequest, isGetProjectsRequest, isGetPubsubSubscriptionRequest, isGetJobRequest, isGetWorkspaceRequest, isGetWorkspacesRequest, isNeurobassRequest, isRegisterComputeResourceRequest, isRenameFileRequest, isSetFileRequest, isSetProjectPropertyRequest, isSetJobPropertyRequest, isSetWorkspacePropertyRequest, isSetWorkspaceUsersRequest } from '../src/types/NeurobassRequest'
 
 const ADMIN_USER_IDS = JSON.parse(process.env.ADMIN_USER_IDS || '[]') as string[]
 
@@ -128,14 +126,14 @@ module.exports = (req: VercelRequest, res: VercelResponse) => {
         else if (isDeleteWorkspaceRequest(payload)) {
             return await deleteWorkspaceHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isGetProjectFilesRequest(payload)) {
-            return await getProjectFilesHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isGetFilesRequest(payload)) {
+            return await getFilesHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isSetProjectFileRequest(payload)) {
-            return await setProjectFileHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isSetFileRequest(payload)) {
+            return await setFileHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isGetProjectFileRequest(payload)) {
-            return await getProjectFileHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isGetFileRequest(payload)) {
+            return await getFileHandler(payload, {verifiedClientId, verifiedUserId})
         }
         else if (isSetWorkspaceUsersRequest(payload)) {
             return await setWorkspaceUsersHandler(payload, {verifiedClientId, verifiedUserId})
@@ -148,9 +146,6 @@ module.exports = (req: VercelRequest, res: VercelResponse) => {
         }
         else if (isDeleteProjectRequest(payload)) {
             return await deleteProjectHandler(payload, {verifiedClientId, verifiedUserId})
-        }
-        else if (isCloneProjectRequest(payload)) {
-            return await cloneProjectHandler(payload, {verifiedClientId, verifiedUserId})
         }
         else if (isSetProjectPropertyRequest(payload)) {
             return await setProjectPropertyHandler(payload, {verifiedClientId, verifiedUserId})
@@ -167,35 +162,32 @@ module.exports = (req: VercelRequest, res: VercelResponse) => {
         else if (isDeleteComputeResourceRequest(payload)) {
             return await deleteComputeResourceHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isCreateScriptJobRequest(payload)) {
-            return await createScriptJobHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isCreateJobRequest(payload)) {
+            return await createJobHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isDeleteScriptJobRequest(payload)) {
-            return await deleteScriptJobHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isDeleteJobRequest(payload)) {
+            return await deleteJobHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isDeleteCompletedScriptJobsRequest(payload)) {
-            return await deleteCompletedScriptJobsHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isGetJobRequest(payload)) {
+            return await getJobHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isGetScriptJobRequest(payload)) {
-            return await getScriptJobHandler(payload, {verifiedClientId, verifiedUserId})
-        }
-        else if (isGetScriptJobsRequest(payload)) {
-            return await getScriptJobsHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isGetJobsRequest(payload)) {
+            return await getJobsHandler(payload, {verifiedClientId, verifiedUserId})
         }
         else if (isGetActiveComputeResourceNodesRequest(payload)) {
             return await getActiveComputeResourceNodesHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isSetScriptJobPropertyRequest(payload)) {
-            return await setScriptJobPropertyHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isSetJobPropertyRequest(payload)) {
+            return await setJobPropertyHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isDeleteProjectFileRequest(payload)) {
-            return await deleteProjectFileHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isDeleteFileRequest(payload)) {
+            return await deleteFileHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isDuplicateProjectFileRequest(payload)) {
-            return await duplicateProjectFileHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isDuplicateFileRequest(payload)) {
+            return await duplicateFileHandler(payload, {verifiedClientId, verifiedUserId})
         }
-        else if (isRenameProjectFileRequest(payload)) {
-            return await renameProjectFileHandler(payload, {verifiedClientId, verifiedUserId})
+        else if (isRenameFileRequest(payload)) {
+            return await renameFileHandler(payload, {verifiedClientId, verifiedUserId})
         }
         else if (isGetPubsubSubscriptionRequest(payload)) {
             return await getPubsubSubscriptionHandler(payload, {verifiedClientId, verifiedUserId})

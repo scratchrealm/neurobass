@@ -1,11 +1,11 @@
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource"
 import PubsubClient from './PubsubClient'
-import ScriptJobManager from "./ScriptJobManager"
-import { GetPubsubSubscriptionRequest, GetScriptJobsRequest } from "./types/NeurobassRequest"
+import JobManager from "./JobManager"
+import { GetPubsubSubscriptionRequest, GetJobsRequest } from "./types/NeurobassRequest"
 
-class ScriptJobExecutor {
+class JobExecutor {
     #stopped = false
-    #scriptJobManager: ScriptJobManager
+    #jobManager: JobManager
     #pubsubClient: PubsubClient | undefined
     constructor(private a: { dir: string }) {
         // read computeResourceId from .neurobass-compute-resource-node.yaml in dir directory
@@ -14,29 +14,29 @@ class ScriptJobExecutor {
             throw Error(`Invalid containerMethod: ${container_method}`)
         }
         if (container_method === 'none') {
-            console.info('Container method is set to none. Script jobs will be executed on the host.')
+            console.info('Container method is set to none. Jobs will be executed on the host.')
             if (process.env.NEUROBASS_DANGEROUS_CONTAINER_METHOD_NONE !== 'true') {
                 throw Error('Container method is set to none. Set environment variable NEUROBASS_DANGEROUS_CONTAINER_METHOD_NONE to true to allow this.')
             }
         }
-        this.#scriptJobManager = new ScriptJobManager({
+        this.#jobManager = new JobManager({
             dir: a.dir,
-            onScriptJobCompletedOrFailed: (job) => {
+            onJobCompletedOrFailed: (job) => {
                 if (job.status === 'completed') {
-                    console.info(`Script job completed`)
+                    console.info(`Job completed`)
                 }
                 else if (job.status === 'failed') {
-                    console.info(`Script job failed`)
+                    console.info(`Job failed`)
                 }
                 else {
-                    console.warn(`Unexpected script job status: ${job.status}`)
+                    console.warn(`Unexpected job status: ${job.status}`)
                 }
-                this._processPendingScriptJobs()
+                this._processPendingJobs()
             }
         })
     }maxNumConcurrentSpaJobs
     async start() {
-        console.info('Starting script job executor.')
+        console.info('Starting job executor.')
 
         const reqPubsub: GetPubsubSubscriptionRequest = {
             type: 'getPubsubSubscription',
@@ -51,38 +51,38 @@ class ScriptJobExecutor {
 
         const onPubsubMessage = (message: any) => {
             console.info(`Received pubsub message: ${message.type}`)
-            if (message.type === 'newPendingScriptJob') {
-                this._processPendingScriptJobs()
+            if (message.type === 'newPendingJob') {
+                this._processPendingJobs()
             }
         }
         this.#pubsubClient = new PubsubClient(respPubsub.subscriptionInfo, onPubsubMessage)
 
-        // periodically clean up old script jobs
+        // periodically clean up old jobs
         const doCleanup = async () => {
             if (this.#stopped) {
                 return
             }
-            await this.#scriptJobManager.cleanupOldJobs()
+            await this.#jobManager.cleanupOldJobs()
             setTimeout(doCleanup, 1000 * 60 * 10)
         }
         doCleanup()
 
-        // periodically check for new script jobs (and report that this node is active)
-        const doCheckForNewScriptJobs = async () => {
+        // periodically check for new jobs (and report that this node is active)
+        const doCheckForNewJobs = async () => {
             if (this.#stopped) {
                 return
             }
-            await this._processPendingScriptJobs()
-            setTimeout(doCheckForNewScriptJobs, 1000 * 60 * 5)
+            await this._processPendingJobs()
+            setTimeout(doCheckForNewJobs, 1000 * 60 * 5)
         }
-        doCheckForNewScriptJobs()
+        doCheckForNewJobs()
     }
-    private async _processPendingScriptJobs() {
+    private async _processPendingJobs() {
         if (this.#stopped) {
             return
         }
-        const req: GetScriptJobsRequest = {
-            type: 'getScriptJobs',
+        const req: GetJobsRequest = {
+            type: 'getJobs',
             timestamp: Date.now() / 1000,
             computeResourceId: process.env.COMPUTE_RESOURCE_ID,
             status: 'pending',
@@ -91,24 +91,24 @@ class ScriptJobExecutor {
         }
         const resp = await this._postNeurobassRequest(req)
         if (resp) {
-            if (resp.type !== 'getScriptJobs') {
+            if (resp.type !== 'getJobs') {
                 console.warn(resp)
-                throw Error('Unexpected response type. Expected getScriptJobs')
+                throw Error('Unexpected response type. Expected getJobs')
             }
-            const {scriptJobs} = resp
-            if (scriptJobs.length > 0) {
-                console.info(`Found ${scriptJobs.length} pending script jobs.`)
+            const {jobs} = resp
+            if (jobs.length > 0) {
+                console.info(`Found ${jobs.length} pending jobs.`)
             }
-            for (const scriptJob of scriptJobs) {
+            for (const job of jobs) {
                 try {
-                    const initiated = await this.#scriptJobManager.initiateJob(scriptJob)
+                    const initiated = await this.#jobManager.initiateJob(job)
                     if (initiated) {
-                        console.info(`Initiated script job: ${scriptJob.scriptJobId}`)
+                        console.info(`Initiated job: ${job.jobId}`)
                     }
                 }
                 catch (err) {
                     console.warn(err)
-                    console.info(`Unable to handle script job: ${err.message}`)
+                    console.info(`Unable to handle job: ${err.message}`)
                 }
             }
         }
@@ -122,11 +122,11 @@ class ScriptJobExecutor {
     
     async stop() {
         this.#stopped = true
-        this.#scriptJobManager.stop()
+        this.#jobManager.stop()
         if (this.#pubsubClient) {
             this.#pubsubClient.unsubscribe()
         }
     }
 }
 
-export default ScriptJobExecutor
+export default JobExecutor

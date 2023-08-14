@@ -1,7 +1,7 @@
-import { SPWorkspace } from "../src/types/neurobass-types"
+import { NBWorkspace } from "../src/types/neurobass-types"
 import getWorkspaceRole from './getWorkspaceRole'
 
-export const userCanCreateProject = (workspace: SPWorkspace, userId: string | undefined): boolean => {
+export const userCanCreateProject = (workspace: NBWorkspace, userId: string | undefined): boolean => {
     const workspaceRole = getWorkspaceRole(workspace, userId)
     return ((workspaceRole === 'admin' || workspaceRole === 'editor'))
 }
@@ -13,7 +13,7 @@ export const userCanCreateWorkspace = (userId: string | undefined): boolean => {
     return false
 }
 
-export const userCanDeleteProject = (workspace: SPWorkspace, userId: string | undefined): boolean => {
+export const userCanDeleteProject = (workspace: NBWorkspace, userId: string | undefined): boolean => {
     if (!userId) return false
     const workspaceRole = getWorkspaceRole(workspace, userId)
     if (workspaceRole === 'admin' || workspaceRole === 'editor') {
@@ -22,7 +22,7 @@ export const userCanDeleteProject = (workspace: SPWorkspace, userId: string | un
     return false
 }
 
-export const userCanDeleteWorkspace = (workspace: SPWorkspace, userId: string | undefined): boolean => {
+export const userCanDeleteWorkspace = (workspace: NBWorkspace, userId: string | undefined): boolean => {
     if (!userId) {
         return false
     }
@@ -30,7 +30,7 @@ export const userCanDeleteWorkspace = (workspace: SPWorkspace, userId: string | 
     return workspaceRole === 'admin'
 }
 
-export const userCanReadWorkspace = (workspace: SPWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
+export const userCanReadWorkspace = (workspace: NBWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
     if (clientId) {
         const computeResourceId = workspace.computeResourceId || process.env.VITE_DEFAULT_COMPUTE_RESOURCE_ID
         if ((computeResourceId) && (computeResourceId === clientId)) {
@@ -41,7 +41,7 @@ export const userCanReadWorkspace = (workspace: SPWorkspace, userId: string | un
     return ((workspaceRole === 'admin' || workspaceRole === 'editor' || workspaceRole === 'viewer'))
 }
 
-export const userCanSetProjectFile = (workspace: SPWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
+export const userCanSetFile = (workspace: NBWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
     if (clientId) {
         const computeResourceId = workspace.computeResourceId || process.env.VITE_DEFAULT_COMPUTE_RESOURCE_ID
         if ((computeResourceId) && (computeResourceId === clientId)) {
@@ -52,7 +52,7 @@ export const userCanSetProjectFile = (workspace: SPWorkspace, userId: string | u
     return ((workspaceRole === 'admin' || workspaceRole === 'editor'))
 }
 
-export const userCanDeleteProjectFile = (workspace: SPWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
+export const userCanDeleteFile = (workspace: NBWorkspace, userId: string | undefined, clientId: string | undefined): boolean => {
     if (!userId) {
         // anonymous cannot delete
         return false
@@ -61,17 +61,17 @@ export const userCanDeleteProjectFile = (workspace: SPWorkspace, userId: string 
     return ((workspaceRole === 'admin' || workspaceRole === 'editor'))
 }
 
-export const userCanSetWorkspaceProperty = (workspace: SPWorkspace, userId: string | undefined): boolean => {
+export const userCanSetWorkspaceProperty = (workspace: NBWorkspace, userId: string | undefined): boolean => {
     const workspaceRole = getWorkspaceRole(workspace, userId)
     return (workspaceRole === 'admin')
 }
 
-export const userCanSetWorkspaceUsers = (workspace: SPWorkspace, userId: string | undefined): boolean => {
+export const userCanSetWorkspaceUsers = (workspace: NBWorkspace, userId: string | undefined): boolean => {
     const workspaceRole = getWorkspaceRole(workspace, userId)
     return (workspaceRole === 'admin')
 }
 
-export const userCanSetProjectProperty = (workspace: SPWorkspace, userId: string | undefined, property: string): boolean => {
+export const userCanSetProjectProperty = (workspace: NBWorkspace, userId: string | undefined, property: string): boolean => {
     const workspaceRole = getWorkspaceRole(workspace, userId)
     return ((workspaceRole === 'admin' || workspaceRole === 'editor'))
 }

@@ -3,7 +3,7 @@ import { createProject, deleteWorkspace, fetchProjects, fetchWorkspace, setWorks
 import { useGithubAuth } from '../../GithubAuth/useGithubAuth';
 import { setPubNubListenChannel } from '../../pubnub/pubnub';
 import { useSPMain } from '../../SPMainContext';
-import { SPProject, SPWorkspace } from '../../types/neurobass-types';
+import { NBProject, NBWorkspace } from '../../types/neurobass-types';
 
 type Props = {
     workspaceId: string
@@ -11,8 +11,8 @@ type Props = {
 
 type WorkspacePageContextType = {
     workspaceId: string
-    workspace: SPWorkspace | undefined
-    projects?: SPProject[]
+    workspace: NBWorkspace | undefined
+    projects?: NBProject[]
     createProject: (projectName: string) => Promise<string>
     deleteWorkspace: () => Promise<void>
     setWorkspaceUsers: (users: {userId: string, role: 'admin' | 'editor' | 'viewer'}[]) => Promise<void>
@@ -32,8 +32,8 @@ const WorkspacePageContext = React.createContext<WorkspacePageContextType>({
 })
 
 export const SetupWorkspacePage: FunctionComponent<PropsWithChildren<Props>> = ({children, workspaceId}) => {
-    const [projects, setProjects] = React.useState<SPProject[] | undefined>(undefined)
-    const [workspace, setWorkspace] = React.useState<SPWorkspace | undefined>(undefined)
+    const [projects, setProjects] = React.useState<NBProject[] | undefined>(undefined)
+    const [workspace, setWorkspace] = React.useState<NBWorkspace | undefined>(undefined)
     const [projectsRefreshCode, setProjectsRefreshCode] = React.useState(0)
     const [workspaceRefreshCode, setWorkspaceRefreshCode] = React.useState(0)
 

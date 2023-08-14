@@ -1,5 +1,5 @@
 import { DeleteComputeResourceRequest, DeleteComputeResourceResponse } from "../../src/types/NeurobassRequest";
-import { isSPComputeResource } from "../../src/types/neurobass-types";
+import { isNBComputeResource } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import removeIdField from "../removeIdField";
 
@@ -14,7 +14,7 @@ const deleteComputeResourceHandler = async (request: DeleteComputeResourceReques
     if (!cr) {
         throw new Error('Compute resource not found')
     }
-    if (!isSPComputeResource(cr)) {
+    if (!isNBComputeResource(cr)) {
         console.warn(cr)
         throw new Error('Invalid compute resource in database (2)')
     }

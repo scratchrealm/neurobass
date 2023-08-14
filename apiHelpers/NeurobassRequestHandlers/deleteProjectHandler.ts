@@ -19,14 +19,14 @@ const deleteProjectHandler = async (request: DeleteProjectRequest, o: {verifiedC
         throw new Error('Incorrect workspace ID')
     }
 
-    const projectFilesCollection = client.db('neurobass').collection('projectFiles')
-    projectFilesCollection.deleteMany({projectId: request.projectId})
+    const filesCollection = client.db('neurobass').collection('files')
+    filesCollection.deleteMany({projectId: request.projectId})
 
     const dataBlobsCollection = client.db('neurobass').collection('dataBlobs')
     dataBlobsCollection.deleteMany({projectId: request.projectId})
 
-    const scriptJobsCollection = client.db('neurobass').collection('scriptJobs')
-    scriptJobsCollection.deleteMany({projectId: request.projectId})
+    const jobsCollection = client.db('neurobass').collection('jobs')
+    jobsCollection.deleteMany({projectId: request.projectId})
 
     const projectsCollection = client.db('neurobass').collection('projects')
 

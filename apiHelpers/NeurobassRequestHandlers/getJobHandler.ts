@@ -1,14 +1,14 @@
-import { GetScriptJobRequest, GetScriptJobResponse } from "../../src/types/NeurobassRequest";
-import { isSPScriptJob } from "../../src/types/neurobass-types";
+import { GetJobRequest, GetJobResponse } from "../../src/types/NeurobassRequest";
+import { isNBJob } from "../../src/types/neurobass-types";
 import getProject from "../getProject";
 import { getMongoClient } from "../getMongoClient";
 import getWorkspace from "../getWorkspace";
 import { userCanReadWorkspace } from "../permissions";
 import removeIdField from "../removeIdField";
 
-const getScriptJob = async (request: GetScriptJobRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<GetScriptJobResponse> => {
+const getJob = async (request: GetJobRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<GetJobResponse> => {
     const client = await getMongoClient()
-    const scriptJobsCollection = client.db('neurobass').collection('scriptJobs')
+    const jobsCollection = client.db('neurobass').collection('jobs')
 
     const project = await getProject(request.projectId, {useCache: true})
     
@@ -21,22 +21,22 @@ const getScriptJob = async (request: GetScriptJobRequest, o: {verifiedClientId?:
         throw new Error('workspaceId does not match project.workspaceId')
     }
     
-    const scriptJob = removeIdField(await scriptJobsCollection.findOne({
+    const job = removeIdField(await jobsCollection.findOne({
         workspaceId: request.workspaceId,
         projectId: request.projectId,
-        scriptJobId: request.scriptJobId
+        jobId: request.jobId
     }))
-    if (!scriptJob) {
-        throw new Error(`No script job with ID ${request.scriptJobId}`)
+    if (!job) {
+        throw new Error(`No job with ID ${request.jobId}`)
     }
-    if (!isSPScriptJob(scriptJob)) {
-        console.warn(scriptJob)
-        throw new Error('Invalid script job in database (2)')
+    if (!isNBJob(job)) {
+        console.warn(job)
+        throw new Error('Invalid job in database (2)')
     }
     return {
-        type: 'getScriptJob',
-        scriptJob
+        type: 'getJob',
+        job
     }
 }
 
-export default getScriptJob
+export default getJob

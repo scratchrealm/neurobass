@@ -1,6 +1,6 @@
-import { SPWorkspace } from "../src/types/neurobass-types"
+import { NBWorkspace } from "../src/types/neurobass-types"
 
-const getWorkspaceRole = (workspace: SPWorkspace, userId: string | undefined): 'none' | 'viewer' | 'editor' | 'admin' => {
+const getWorkspaceRole = (workspace: NBWorkspace, userId: string | undefined): 'none' | 'viewer' | 'editor' | 'admin' => {
     if (userId?.startsWith('admin|')) {
         return 'admin'
     }

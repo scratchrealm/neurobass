@@ -1,4 +1,4 @@
-import { isSPProject, isSPProjectFile, isSPComputeResource, isSPScriptJob, isSPWorkspace, SPProject, SPProjectFile, SPComputeResource, SPScriptJob, SPWorkspace } from "./neurobass-types"
+import { isNBProject, isNBFile, isNBComputeResource, isNBJob, isNBWorkspace, NBProject, NBFile, NBComputeResource, NBJob, NBWorkspace } from "./neurobass-types"
 import validateObject, { isArrayOf, isBoolean, isEqualTo, isNumber, isOneOf, isString, optional } from "./validateObject"
 
 // getWorkspaces
@@ -17,13 +17,13 @@ export const isGetWorkspacesRequest = (x: any): x is GetWorkspacesRequest => {
 
 export type GetWorkspacesResponse = {
     type: 'getWorkspaces'
-    workspaces: SPWorkspace[]
+    workspaces: NBWorkspace[]
 }
 
 export const isGetWorkspacesResponse = (x: any): x is GetWorkspacesResponse => {
     return validateObject(x, {
         type: isEqualTo('getWorkspaces'),
-        workspaces: isArrayOf(isSPWorkspace)
+        workspaces: isArrayOf(isNBWorkspace)
     })
 }
 
@@ -45,13 +45,13 @@ export const isGetWorkspaceRequest = (x: any): x is GetWorkspaceRequest => {
 
 export type GetWorkspaceResponse = {
     type: 'getWorkspace'
-    workspace: SPWorkspace
+    workspace: NBWorkspace
 }
 
 export const isGetWorkspaceResponse = (x: any): x is GetWorkspaceResponse => {
     return validateObject(x, {
         type: isEqualTo('getWorkspace'),
-        workspace: isSPWorkspace
+        workspace: isNBWorkspace
     })
 }
 
@@ -101,13 +101,13 @@ export const isGetProjectsRequest = (x: any): x is GetProjectsRequest => {
 
 export type GetProjectsResponse = {
     type: 'getProjects'
-    projects: SPProject[]
+    projects: NBProject[]
 }
 
 export const isGetProjectsResponse = (x: any): x is GetProjectsResponse => {
     return validateObject(x, {
         type: isEqualTo('getProjects'),
-        projects: isArrayOf(isSPProject)
+        projects: isArrayOf(isNBProject)
     })
 }
 
@@ -129,13 +129,13 @@ export const isGetProjectRequest = (x: any): x is GetProjectRequest => {
 
 export type GetProjectResponse = {
     type: 'getProject'
-    project: SPProject
+    project: NBProject
 }
 
 export const isGetProjectResponse = (x: any): x is GetProjectResponse => {
     return validateObject(x, {
         type: isEqualTo('getProject'),
-        project: isSPProject
+        project: isNBProject
     })
 }
 
@@ -259,79 +259,89 @@ export const isSetWorkspacePropertyResponse = (x: any): x is SetWorkspacePropert
     })
 }
 
-// getProjectFiles
+// getFiles
 
-export type GetProjectFilesRequest = {
-    type: 'getProjectFiles'
+export type GetFilesRequest = {
+    type: 'getFiles'
     timestamp: number
     projectId: string
 }
 
-export const isGetProjectFilesRequest = (x: any): x is GetProjectFilesRequest => {
+export const isGetFilesRequest = (x: any): x is GetFilesRequest => {
     return validateObject(x, {
-        type: isEqualTo('getProjectFiles'),
+        type: isEqualTo('getFiles'),
         timestamp: isNumber,
         projectId: isString
     })
 }
 
-export type GetProjectFilesResponse = {
-    type: 'getProjectFiles'
-    projectFiles: SPProjectFile[]
+export type GetFilesResponse = {
+    type: 'getFiles'
+    files: NBFile[]
 }
 
-export const isGetProjectFilesResponse = (x: any): x is GetProjectFilesResponse => {
+export const isGetFilesResponse = (x: any): x is GetFilesResponse => {
     return validateObject(x, {
-        type: isEqualTo('getProjectFiles'),
-        projectFiles: isArrayOf(isSPProjectFile)
+        type: isEqualTo('getFiles'),
+        files: isArrayOf(isNBFile)
     })
 }
 
-// setProjectFile
+// setFile
 
-export type SetProjectFileRequest = {
-    type: 'setProjectFile'
+export type SetFileRequest = {
+    type: 'setFile'
     timestamp: number
     projectId: string
     workspaceId: string
     fileName: string
-    fileContent: string
+    content?: string
+    fileData?: string
+    size: number
+    jobId?: string
+    metadata: {
+        [key: string]: any
+    }
 }
 
-export const isSetProjectFileRequest = (x: any): x is SetProjectFileRequest => {
+export const isSetFileRequest = (x: any): x is SetFileRequest => {
     return validateObject(x, {
-        type: isEqualTo('setProjectFile'),
+        type: isEqualTo('setFile'),
         timestamp: isNumber,
         projectId: isString,
         workspaceId: isString,
         fileName: isString,
-        fileContent: isString
+        content: optional(isString),
+        fileData: optional(isString),
+        size: isNumber,
+        jobId: optional(isString),
+        metadata: () => (true)
     })
 }
 
-export type SetProjectFileResponse = {
-    type: 'setProjectFile'
+export type SetFileResponse = {
+    type: 'setFile'
 }
 
-export const isSetProjectFileResponse = (x: any): x is SetProjectFileResponse => {
+export const isSetFileResponse = (x: any): x is SetFileResponse => {
     return validateObject(x, {
-        type: isEqualTo('setProjectFile')
+        type: isEqualTo('setFile')
     })
 }
 
-// deleteProjectFile
+// deleteFile
 
-export type DeleteProjectFileRequest = {
-    type: 'deleteProjectFile'
+export type DeleteFileRequest = {
+    type: 'deleteFile'
     timestamp: number
     workspaceId: string
     projectId: string
     fileName: string
 }
 
-export const isDeleteProjectFileRequest = (x: any): x is DeleteProjectFileRequest => {
+export const isDeleteFileRequest = (x: any): x is DeleteFileRequest => {
     return validateObject(x, {
-        type: isEqualTo('deleteProjectFile'),
+        type: isEqualTo('deleteFile'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
@@ -339,20 +349,20 @@ export const isDeleteProjectFileRequest = (x: any): x is DeleteProjectFileReques
     })
 }
 
-export type DeleteProjectFileResponse = {
-    type: 'deleteProjectFile'
+export type DeleteFileResponse = {
+    type: 'deleteFile'
 }
 
-export const isDeleteProjectFileResponse = (x: any): x is DeleteProjectFileResponse => {
+export const isDeleteFileResponse = (x: any): x is DeleteFileResponse => {
     return validateObject(x, {
-        type: isEqualTo('deleteProjectFile')
+        type: isEqualTo('deleteFile')
     })
 }
 
-// duplicateProjectFile
+// duplicateFile
 
-export type DuplicateProjectFileRequest = {
-    type: 'duplicateProjectFile'
+export type DuplicateFileRequest = {
+    type: 'duplicateFile'
     timestamp: number
     workspaceId: string
     projectId: string
@@ -360,9 +370,9 @@ export type DuplicateProjectFileRequest = {
     newFileName: string
 }
 
-export const isDuplicateProjectFileRequest = (x: any): x is DuplicateProjectFileRequest => {
+export const isDuplicateFileRequest = (x: any): x is DuplicateFileRequest => {
     return validateObject(x, {
-        type: isEqualTo('duplicateProjectFile'),
+        type: isEqualTo('duplicateFile'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
@@ -371,20 +381,20 @@ export const isDuplicateProjectFileRequest = (x: any): x is DuplicateProjectFile
     })
 }
 
-export type DuplicateProjectFileResponse = {
-    type: 'duplicateProjectFile'
+export type DuplicateFileResponse = {
+    type: 'duplicateFile'
 }
 
-export const isDuplicateProjectFileResponse = (x: any): x is DuplicateProjectFileResponse => {
+export const isDuplicateFileResponse = (x: any): x is DuplicateFileResponse => {
     return validateObject(x, {
-        type: isEqualTo('duplicateProjectFile')
+        type: isEqualTo('duplicateFile')
     })
 }
 
-// renameProjectFile
+// renameFile
 
-export type RenameProjectFileRequest = {
-    type: 'renameProjectFile'
+export type RenameFileRequest = {
+    type: 'renameFile'
     timestamp: number
     workspaceId: string
     projectId: string
@@ -392,9 +402,9 @@ export type RenameProjectFileRequest = {
     newFileName: string
 }
 
-export const isRenameProjectFileRequest = (x: any): x is RenameProjectFileRequest => {
+export const isRenameFileRequest = (x: any): x is RenameFileRequest => {
     return validateObject(x, {
-        type: isEqualTo('renameProjectFile'),
+        type: isEqualTo('renameFile'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
@@ -403,43 +413,43 @@ export const isRenameProjectFileRequest = (x: any): x is RenameProjectFileReques
     })
 }
 
-export type RenameProjectFileResponse = {
-    type: 'renameProjectFile'
+export type RenameFileResponse = {
+    type: 'renameFile'
 }
 
-export const isRenameProjectFileResponse = (x: any): x is RenameProjectFileResponse => {
+export const isRenameFileResponse = (x: any): x is RenameFileResponse => {
     return validateObject(x, {
-        type: isEqualTo('renameProjectFile')
+        type: isEqualTo('renameFile')
     })
 }
 
-// getProjectFile
+// getFile
 
-export type GetProjectFileRequest = {
-    type: 'getProjectFile'
+export type GetFileRequest = {
+    type: 'getFile'
     timestamp: number
     projectId: string
     fileName: string
 }
 
-export const isGetProjectFileRequest = (x: any): x is GetProjectFileRequest => {
+export const isGetFileRequest = (x: any): x is GetFileRequest => {
     return validateObject(x, {
-        type: isEqualTo('getProjectFile'),
+        type: isEqualTo('getFile'),
         timestamp: isNumber,
         projectId: isString,
         fileName: isString
     })
 }
 
-export type GetProjectFileResponse = {
-    type: 'getProjectFile'
-    projectFile: SPProjectFile
+export type GetFileResponse = {
+    type: 'getFile'
+    file: NBFile
 }
 
-export const isGetProjectFileResponse = (x: any): x is GetProjectFileResponse => {
+export const isGetFileResponse = (x: any): x is GetFileResponse => {
     return validateObject(x, {
-        type: isEqualTo('getProjectFile'),
-        projectFile: isSPProjectFile
+        type: isEqualTo('getFile'),
+        file: isNBFile
     })
 }
 
@@ -503,38 +513,6 @@ export const isDeleteProjectResponse = (x: any): x is DeleteProjectResponse => {
     })
 }
 
-// cloneProject
-
-export type CloneProjectRequest = {
-    type: 'cloneProject'
-    timestamp: number
-    workspaceId: string
-    projectId: string
-    newWorkspaceId: string
-}
-
-export const isCloneProjectRequest = (x: any): x is CloneProjectRequest => {
-    return validateObject(x, {
-        type: isEqualTo('cloneProject'),
-        timestamp: isNumber,
-        workspaceId: isString,
-        projectId: isString,
-        newWorkspaceId: isString
-    })
-}
-
-export type CloneProjectResponse = {
-    type: 'cloneProject'
-    newProjectId: string
-}
-
-export const isCloneProjectResponse = (x: any): x is CloneProjectResponse => {
-    return validateObject(x, {
-        type: isEqualTo('cloneProject'),
-        newProjectId: isString
-    })
-}
-
 // setProjectProperty
 
 export type SetProjectPropertyRequest = {
@@ -581,13 +559,13 @@ export const isGetComputeResourcesRequest = (x: any): x is GetComputeResourcesRe
 
 export type GetComputeResourcesResponse = {
     type: 'getComputeResources'
-    computeResources: SPComputeResource[]
+    computeResources: NBComputeResource[]
 }
 
 export const isGetComputeResourcesResponse = (x: any): x is GetComputeResourcesResponse => {
     return validateObject(x, {
         type: isEqualTo('getComputeResources'),
-        computeResources: isArrayOf(isSPComputeResource)
+        computeResources: isArrayOf(isNBComputeResource)
     })
 }
 
@@ -609,13 +587,13 @@ export const isGetComputeResourceRequest = (x: any): x is GetComputeResourceRequ
 
 export type GetComputeResourceResponse = {
     type: 'getComputeResource'
-    computeResource: SPComputeResource
+    computeResource: NBComputeResource
 }
 
 export const isGetComputeResourceResponse = (x: any): x is GetComputeResourceResponse => {
     return validateObject(x, {
         type: isEqualTo('getComputeResource'),
-        computeResource: isSPComputeResource
+        computeResource: isNBComputeResource
     })
 }
 
@@ -675,144 +653,130 @@ export const isDeleteComputeResourceResponse = (x: any): x is DeleteComputeResou
     })
 }
 
-// createScriptJob
+// createJob
 
-export type CreateScriptJobRequest = {
-    type: 'createScriptJob'
+export type CreateJobRequest = {
+    type: 'createJob'
     timestamp: number
     workspaceId: string
     projectId: string
-    scriptFileName: string
-    requiredResources?: {
-        numCpus: number
-        ramGb: number
-        timeoutSec: number
-    }
+    processType: string
+    inputFiles: {
+        name: string
+        fileId: string
+        fileName: string
+    }[]
+    inputParameters: {
+        name: string
+        value: any
+    }[]
+    outputFiles: {
+        name: string
+        fileName: string
+    }[]
 }
 
-export const isCreateScriptJobRequest = (x: any): x is CreateScriptJobRequest => {
+export const isCreateJobRequest = (x: any): x is CreateJobRequest => {
     return validateObject(x, {
-        type: isEqualTo('createScriptJob'),
+        type: isEqualTo('createJob'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
-        scriptFileName: isString,
-        requiredResources: optional((y: any) => (validateObject(y, {
-            numCpus: isNumber,
-            ramGb: isNumber,
-            timeoutSec: isNumber
+        processType: isString,
+        inputFiles: isArrayOf(y => (validateObject(y, {
+            name: isString,
+            fileId: isString,
+            fileName: isString
+        }))),
+        inputParameters: isArrayOf(y => (validateObject(y, {
+            name: isString,
+            value: () => (true)
+        }))),
+        outputFiles: isArrayOf(y => (validateObject(y, {
+            name: isString,
+            fileName: isString
         })))
     })
 }
 
-export type CreateScriptJobResponse = {
-    type: 'createScriptJob'
-    scriptJobId: string
+export type CreateJobResponse = {
+    type: 'createJob'
+    jobId: string
 }
 
-export const isCreateScriptJobResponse = (x: any): x is CreateScriptJobResponse => {
+export const isCreateJobResponse = (x: any): x is CreateJobResponse => {
     return validateObject(x, {
-        type: isEqualTo('createScriptJob'),
-        scriptJobId: isString
+        type: isEqualTo('createJob'),
+        jobId: isString
     })
 }
 
-// deleteScriptJob
+// deleteJob
 
-export type DeleteScriptJobRequest = {
-    type: 'deleteScriptJob'
+export type DeleteJobRequest = {
+    type: 'deleteJob'
     timestamp: number
     workspaceId: string
     projectId: string
-    scriptJobId: string
+    jobId: string
 }
 
-export const isDeleteScriptJobRequest = (x: any): x is DeleteScriptJobRequest => {
+export const isDeleteJobRequest = (x: any): x is DeleteJobRequest => {
     return validateObject(x, {
-        type: isEqualTo('deleteScriptJob'),
+        type: isEqualTo('deleteJob'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
-        scriptJobId: isString
+        jobId: isString
     })
 }
 
-export type DeleteScriptJobResponse = {
-    type: 'deleteScriptJob'
+export type DeleteJobResponse = {
+    type: 'deleteJob'
 }
 
-export const isDeleteScriptJobResponse = (x: any): x is DeleteScriptJobResponse => {
+export const isDeleteJobResponse = (x: any): x is DeleteJobResponse => {
     return validateObject(x, {
-        type: isEqualTo('deleteScriptJob')
+        type: isEqualTo('deleteJob')
     })
 }
 
-// deleteCompletedScriptJobs
+// getJob
 
-export type DeleteCompletedScriptJobsRequest = {
-    type: 'deleteCompletedScriptJobs'
+export type GetJobRequest = {
+    type: 'getJob'
     timestamp: number
     workspaceId: string
     projectId: string
-    scriptFileName: string
+    jobId: string
 }
 
-export const isDeleteCompletedScriptJobsRequest = (x: any): x is DeleteCompletedScriptJobsRequest => {
+export const isGetJobRequest = (x: any): x is GetJobRequest => {
     return validateObject(x, {
-        type: isEqualTo('deleteCompletedScriptJobs'),
+        type: isEqualTo('getJob'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
-        scriptFileName: isString
+        jobId: isString
     })
 }
 
-export type DeleteCompletedScriptJobsResponse = {
-    type: 'deleteCompletedScriptJobs'
+export type GetJobResponse = {
+    type: 'getJob'
+    job: NBJob
 }
 
-export const isDeleteCompletedScriptJobsResponse = (x: any): x is DeleteCompletedScriptJobsResponse => {
+export const isGetJobResponse = (x: any): x is GetJobResponse => {
     return validateObject(x, {
-        type: isEqualTo('deleteCompletedScriptJobs')
+        type: isEqualTo('getJob'),
+        job: isNBJob
     })
 }
 
-// getScriptJob
+// getJobs
 
-export type GetScriptJobRequest = {
-    type: 'getScriptJob'
-    timestamp: number
-    workspaceId: string
-    projectId: string
-    scriptJobId: string
-}
-
-export const isGetScriptJobRequest = (x: any): x is GetScriptJobRequest => {
-    return validateObject(x, {
-        type: isEqualTo('getScriptJob'),
-        timestamp: isNumber,
-        workspaceId: isString,
-        projectId: isString,
-        scriptJobId: isString
-    })
-}
-
-export type GetScriptJobResponse = {
-    type: 'getScriptJob'
-    scriptJob: SPScriptJob
-}
-
-export const isGetScriptJobResponse = (x: any): x is GetScriptJobResponse => {
-    return validateObject(x, {
-        type: isEqualTo('getScriptJob'),
-        scriptJob: isSPScriptJob
-    })
-}
-
-// getScriptJobs
-
-export type GetScriptJobsRequest = {
-    type: 'getScriptJobs'
+export type GetJobsRequest = {
+    type: 'getJobs'
     timestamp: number
     computeResourceId?: string
     status?: 'pending' | 'running' | 'completed' | 'failed'
@@ -821,9 +785,9 @@ export type GetScriptJobsRequest = {
     nodeName?: string
 }
 
-export const isGetScriptJobsRequest = (x: any): x is GetScriptJobsRequest => {
+export const isGetJobsRequest = (x: any): x is GetJobsRequest => {
     return validateObject(x, {
-        type: isEqualTo('getScriptJobs'),
+        type: isEqualTo('getJobs'),
         timestamp: isNumber,
         computeResourceId: optional(isString),
         status: optional(isOneOf([isEqualTo('pending'), isEqualTo('running'), isEqualTo('completed'), isEqualTo('failed')])),
@@ -833,15 +797,15 @@ export const isGetScriptJobsRequest = (x: any): x is GetScriptJobsRequest => {
     })
 }
 
-export type GetScriptJobsResponse = {
-    type: 'getScriptJobs'
-    scriptJobs: SPScriptJob[]
+export type GetJobsResponse = {
+    type: 'getJobs'
+    jobs: NBJob[]
 }
 
-export const isGetScriptJobsResponse = (x: any): x is GetScriptJobsResponse => {
+export const isGetJobsResponse = (x: any): x is GetJobsResponse => {
     return validateObject(x, {
-        type: isEqualTo('getScriptJobs'),
-        scriptJobs: isArrayOf(isSPScriptJob)
+        type: isEqualTo('getJobs'),
+        jobs: isArrayOf(isNBJob)
     })
 }
 
@@ -881,27 +845,27 @@ export const isGetActiveComputeResourceNodesResponse = (x: any): x is GetActiveC
     })
 }
 
-// setScriptJobProperty
+// setJobProperty
 
-export type SetScriptJobPropertyRequest = {
-    type: 'setScriptJobProperty'
+export type SetJobPropertyRequest = {
+    type: 'setJobProperty'
     timestamp: number
     workspaceId: string
     projectId: string
-    scriptJobId: string
+    jobId: string
     property: string
     value: any
     computeResourceNodeId?: string
     computeResourceNodeName?: string
 }
 
-export const isSetScriptJobPropertyRequest = (x: any): x is SetScriptJobPropertyRequest => {
+export const isSetJobPropertyRequest = (x: any): x is SetJobPropertyRequest => {
     return validateObject(x, {
-        type: isEqualTo('setScriptJobProperty'),
+        type: isEqualTo('setJobProperty'),
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
-        scriptJobId: isString,
+        jobId: isString,
         property: isString,
         value: () => (true),
         computeResourceNodeId: optional(isString),
@@ -909,15 +873,15 @@ export const isSetScriptJobPropertyRequest = (x: any): x is SetScriptJobProperty
     })
 }
 
-export type SetScriptJobPropertyResponse = {
-    type: 'setScriptJobProperty'
+export type SetJobPropertyResponse = {
+    type: 'setJobProperty'
     success?: boolean
     error?: string
 }
 
-export const isSetScriptJobPropertyResponse = (x: any): x is SetScriptJobPropertyResponse => {
+export const isSetJobPropertyResponse = (x: any): x is SetJobPropertyResponse => {
     return validateObject(x, {
-        type: isEqualTo('setScriptJobProperty'),
+        type: isEqualTo('setJobProperty'),
         success: optional(isBoolean),
         error: optional(isString)
     })
@@ -963,27 +927,25 @@ export type NeurobassRequestPayload =
     SetWorkspaceUsersRequest |
     SetWorkspacePropertyRequest |
     DeleteWorkspaceRequest |
-    GetProjectFilesRequest |
-    SetProjectFileRequest |
-    DeleteProjectFileRequest |
-    DuplicateProjectFileRequest |
-    RenameProjectFileRequest |
-    GetProjectFileRequest |
+    GetFilesRequest |
+    SetFileRequest |
+    DeleteFileRequest |
+    DuplicateFileRequest |
+    RenameFileRequest |
+    GetFileRequest |
     GetDataBlobRequest |
     DeleteProjectRequest |
-    CloneProjectRequest |
     SetProjectPropertyRequest |
     GetComputeResourcesRequest |
     GetComputeResourceRequest |
     RegisterComputeResourceRequest |
     DeleteComputeResourceRequest |
-    CreateScriptJobRequest |
-    DeleteScriptJobRequest |
-    DeleteCompletedScriptJobsRequest |
-    GetScriptJobRequest |
-    GetScriptJobsRequest |
+    CreateJobRequest |
+    DeleteJobRequest |
+    GetJobRequest |
+    GetJobsRequest |
     GetActiveComputeResourceNodesRequest |
-    SetScriptJobPropertyRequest |
+    SetJobPropertyRequest |
     GetPubsubSubscriptionRequest
 
 export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload => {
@@ -997,27 +959,25 @@ export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload 
         isSetWorkspaceUsersRequest,
         isSetWorkspacePropertyRequest,
         isDeleteWorkspaceRequest,
-        isGetProjectFilesRequest,
-        isSetProjectFileRequest,
-        isDeleteProjectFileRequest,
-        isDuplicateProjectFileRequest,
-        isRenameProjectFileRequest,
-        isGetProjectFileRequest,
+        isGetFilesRequest,
+        isSetFileRequest,
+        isDeleteFileRequest,
+        isDuplicateFileRequest,
+        isRenameFileRequest,
+        isGetFileRequest,
         isGetDataBlobRequest,
         isDeleteProjectRequest,
-        isCloneProjectRequest,
         isSetProjectPropertyRequest,
         isGetComputeResourcesRequest,
         isGetComputeResourceRequest,
         isRegisterComputeResourceRequest,
         isDeleteComputeResourceRequest,
-        isCreateScriptJobRequest,
-        isDeleteScriptJobRequest,
-        isDeleteCompletedScriptJobsRequest,
-        isGetScriptJobRequest,
-        isGetScriptJobsRequest,
+        isCreateJobRequest,
+        isDeleteJobRequest,
+        isGetJobRequest,
+        isGetJobsRequest,
         isGetActiveComputeResourceNodesRequest,
-        isSetScriptJobPropertyRequest,
+        isSetJobPropertyRequest,
         isGetPubsubSubscriptionRequest
     ])(x)
 }
@@ -1054,27 +1014,25 @@ export type NeurobassResponse =
     SetWorkspaceUsersResponse |
     SetWorkspacePropertyResponse |
     DeleteWorkspaceResponse |
-    GetProjectFilesResponse |
-    SetProjectFileResponse |
-    DeleteProjectFileResponse |
-    DuplicateProjectFileResponse |
-    RenameProjectFileResponse |
-    GetProjectFileResponse |
+    GetFilesResponse |
+    SetFileResponse |
+    DeleteFileResponse |
+    DuplicateFileResponse |
+    RenameFileResponse |
+    GetFileResponse |
     GetDataBlobResponse |
     DeleteProjectResponse |
-    CloneProjectResponse |
     SetProjectPropertyResponse |
     GetComputeResourcesResponse |
     GetComputeResourceResponse |
     RegisterComputeResourceResponse |
     DeleteComputeResourceResponse |
-    CreateScriptJobResponse |
-    DeleteScriptJobResponse |
-    DeleteCompletedScriptJobsResponse |
-    GetScriptJobResponse |
-    GetScriptJobsResponse |
+    CreateJobResponse |
+    DeleteJobResponse |
+    GetJobResponse |
+    GetJobsResponse |
     GetActiveComputeResourceNodesResponse |
-    SetScriptJobPropertyResponse |
+    SetJobPropertyResponse |
     GetPubsubSubscriptionResponse
 
 export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
@@ -1088,27 +1046,25 @@ export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
         isSetWorkspaceUsersResponse,
         isSetWorkspacePropertyResponse,
         isDeleteWorkspaceResponse,
-        isGetProjectFilesResponse,
-        isSetProjectFileResponse,
-        isDeleteProjectFileResponse,
-        isDuplicateProjectFileResponse,
-        isRenameProjectFileResponse,
-        isGetProjectFileResponse,
+        isGetFilesResponse,
+        isSetFileResponse,
+        isDeleteFileResponse,
+        isDuplicateFileResponse,
+        isRenameFileResponse,
+        isGetFileResponse,
         isGetDataBlobResponse,
         isDeleteProjectResponse,
-        isCloneProjectResponse,
         isSetProjectPropertyResponse,
         isGetComputeResourcesResponse,
         isGetComputeResourceResponse,
         isRegisterComputeResourceResponse,
         isDeleteComputeResourceResponse,
-        isCreateScriptJobResponse,
-        isDeleteScriptJobResponse,
-        isDeleteCompletedScriptJobsResponse,
-        isGetScriptJobResponse,
-        isGetScriptJobsResponse,
+        isCreateJobResponse,
+        isDeleteJobResponse,
+        isGetJobResponse,
+        isGetJobsResponse,
         isGetActiveComputeResourceNodesResponse,
-        isSetScriptJobPropertyResponse,
+        isSetJobPropertyResponse,
         isGetPubsubSubscriptionResponse
     ])(x)
 }

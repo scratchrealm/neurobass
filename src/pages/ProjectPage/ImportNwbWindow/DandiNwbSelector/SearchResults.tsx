@@ -1,7 +1,7 @@
 import { FunctionComponent, useMemo, useState } from "react"
 import Hyperlink from "../../../../components/Hyperlink"
 import Splitter from "../../../../components/Splitter"
-import formatByteCount from "../../ProjectFileBrowser/formatByteCount"
+import formatByteCount from "../../FileBrowser/formatByteCount"
 import DandisetView from "./DandisetView"
 import { AssetsResponseItem, DandisetSearchResultItem } from "./types"
 

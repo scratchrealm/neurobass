@@ -3,8 +3,8 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
-import { SPProjectFile, SPScriptJob } from "./types/neurobass-types";
-import { GetDataBlobRequest, GetProjectFileRequest, GetProjectFilesRequest, NeurobassResponse, SetProjectFileRequest, SetScriptJobPropertyRequest } from "./types/NeurobassRequest";
+import { NBFile, NBJob } from "./types/neurobass-types";
+import { GetDataBlobRequest, GetFileRequest, GetFilesRequest, NeurobassResponse, SetFileRequest, SetJobPropertyRequest } from "./types/NeurobassRequest";
 
 
 export const getPresetConfig = () => {
@@ -19,14 +19,14 @@ type NbaOutput = {
 
 const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
 
-class ScriptJobManager {
+class JobManager {
     #runningJobs: RunningJob[] = []
-    constructor(private config: {dir: string, onScriptJobCompletedOrFailed: (job: RunningJob) => void}) {
+    constructor(private config: {dir: string, onJobCompletedOrFailed: (job: RunningJob) => void}) {
 
     }
-    async initiateJob(job: SPScriptJob): Promise<boolean> {
+    async initiateJob(job: NBJob): Promise<boolean> {
         // important to check whether job is already running
-        if (this.#runningJobs.filter(x => x.scriptJob.scriptJobId === job.scriptJobId).length > 0) {
+        if (this.#runningJobs.filter(x => x.job.jobId === job.jobId).length > 0) {
             return false
         }
 
@@ -45,11 +45,11 @@ class ScriptJobManager {
     }
     async cleanupOldJobs() {
         // list all folders in script_jobs directory
-        const scriptJobsDir = path.join(this.config.dir, 'script_jobs')
-        if (!fs.existsSync(scriptJobsDir)) {
+        const jobsDir = path.join(this.config.dir, 'script_jobs')
+        if (!fs.existsSync(jobsDir)) {
             return
         }
-        const folders = await fs.promises.readdir(scriptJobsDir)
+        const folders = await fs.promises.readdir(jobsDir)
         for (const folder of folders) {
             const folderPath = path.join(this.config.dir, 'script_jobs', folder)
             const stat = await fs.promises.stat(folderPath)
@@ -57,14 +57,14 @@ class ScriptJobManager {
                 // check how old the folder is
                 const elapsedSec = (Date.now() - stat.mtimeMs) / 1000
                 if (elapsedSec > 60 * 60 * 24) {
-                    console.info(`Removing old script job folder: ${folderPath}`)
+                    console.info(`Removing old job folder: ${folderPath}`)
                     await fs.promises.rmdir(folderPath, {recursive: true})
                 }
             }
         }
     }
-    // private async _initiatePythonJob(job: SPScriptJob): Promise<boolean> {
-    //     const x = this.#runningJobs.filter(x => x.scriptJob.scriptFileName.endsWith('.py'))
+    // private async _initiatePythonJob(job: NBJob): Promise<boolean> {
+    //     const x = this.#runningJobs.filter(x => x.job.scriptFileName.endsWith('.py'))
     //     const {max_num_concurrent_python_jobs, max_ram_per_python_job_gb} = this.config.computeResourceConfig
     //     if (x.length >= max_num_concurrent_python_jobs) {
     //         return false
@@ -79,8 +79,8 @@ class ScriptJobManager {
     //     }
     //     return okay
     // }
-    // private async _initiateSpaJob(job: SPScriptJob): Promise<boolean> {
-    //     const x = this.#runningJobs.filter(x => x.scriptJob.scriptFileName.endsWith('.nba'))
+    // private async _initiateSpaJob(job: NBJob): Promise<boolean> {
+    //     const x = this.#runningJobs.filter(x => x.job.scriptFileName.endsWith('.nba'))
     //     const {max_num_concurrent_spa_jobs, num_cpus_per_spa_job, max_ram_per_spa_job_gb} = this.config.computeResourceConfig
     //     if (x.length >= max_num_concurrent_spa_jobs) {
     //         return false
@@ -102,8 +102,8 @@ class ScriptJobManager {
         this.#runningJobs.push(job)
         job.onCompletedOrFailed(() => {
             // remove from list of running jobs
-            this.#runningJobs = this.#runningJobs.filter(j => (j.scriptJob.scriptJobId !== job.scriptJob.scriptJobId))
-            this.config.onScriptJobCompletedOrFailed(job)
+            this.#runningJobs = this.#runningJobs.filter(j => (j.job.jobId !== job.job.jobId))
+            this.config.onJobCompletedOrFailed(job)
         })
     }
 }
@@ -112,13 +112,13 @@ export class RunningJob {
     #onCompletedOrFailedCallbacks: (() => void)[] = []
     #childProcess: ChildProcessWithoutNullStreams | null = null
     #status: 'pending' | 'running' | 'completed' | 'failed' = 'pending'
-    constructor(public scriptJob: SPScriptJob) {
+    constructor(public job: NBJob) {
     }
     async initiate(): Promise<boolean> {
-        console.info(`Initiating script job: ${this.scriptJob.scriptJobId} - ${this.scriptJob.scriptFileName}`)
-        const okay = await this._setScriptJobProperty('status', 'running')
+        console.info(`Initiating job: ${this.job.jobId} - ${this.job.scriptFileName}`)
+        const okay = await this._setJobProperty('status', 'running')
         if (!okay) {
-            console.warn('Unable to set script job status to running')
+            console.warn('Unable to set job status to running')
             return false
         }
         this.#status = 'running'
@@ -126,7 +126,7 @@ export class RunningJob {
             //
         }).catch((err) => {
             console.error(err)
-            console.error('Problem running script job')
+            console.error('Problem running job')
         })
         return true
     }
@@ -147,13 +147,13 @@ export class RunningJob {
     public get status() {
         return this.#status
     }
-    private async _setScriptJobProperty(property: string, value: any): Promise<boolean> {
-        const req: SetScriptJobPropertyRequest = {
-            type: 'setScriptJobProperty',
+    private async _setJobProperty(property: string, value: any): Promise<boolean> {
+        const req: SetJobPropertyRequest = {
+            type: 'setJobProperty',
             timestamp: Date.now() / 1000,
-            workspaceId: this.scriptJob.workspaceId,
-            projectId: this.scriptJob.projectId,
-            scriptJobId: this.scriptJob.scriptJobId,
+            workspaceId: this.job.workspaceId,
+            projectId: this.job.projectId,
+            jobId: this.job.jobId,
             property,
             value,
             computeResourceNodeId: process.env.COMPUTE_RESOURCE_NODE_ID,
@@ -161,11 +161,11 @@ export class RunningJob {
         }
         const resp = await this._postNeurobassRequest(req)
         if (!resp) {
-            throw Error('Unable to set script job property')
+            throw Error('Unable to set job property')
         }
-        if (resp.type !== 'setScriptJobProperty') {
+        if (resp.type !== 'setJobProperty') {
             console.warn(resp)
-            throw Error('Unexpected response type. Expected setScriptJobProperty')
+            throw Error('Unexpected response type. Expected setJobProperty')
         }
         return resp.success
     }
@@ -176,28 +176,28 @@ export class RunningJob {
         })
     }
     private async _loadFileContent(fileName: string): Promise<string> {
-        const req: GetProjectFileRequest = {
-            type: 'getProjectFile',
+        const req: GetFileRequest = {
+            type: 'getFile',
             timestamp: Date.now() / 1000,
-            projectId: this.scriptJob.projectId,
+            projectId: this.job.projectId,
             fileName
         }
         const resp = await this._postNeurobassRequest(req)
         if (!resp) {
             throw Error('Unable to get project file')
         }
-        if (resp.type !== 'getProjectFile') {
+        if (resp.type !== 'getFile') {
             console.warn(resp)
-            throw Error('Unexpected response type. Expected getProjectFile')
+            throw Error('Unexpected response type. Expected getFile')
         }
-        return await this._loadDataBlob(resp.projectFile.contentSha1)
+        return await this._loadDataBlob(resp.file.contentSha1)
     }
     private async _loadDataBlob(sha1: string): Promise<string> {
         const req: GetDataBlobRequest = {
             type: 'getDataBlob',
             timestamp: Date.now() / 1000,
-            workspaceId: this.scriptJob.workspaceId,
-            projectId: this.scriptJob.projectId,
+            workspaceId: this.job.workspaceId,
+            projectId: this.job.projectId,
             sha1
         }
         const resp = await this._postNeurobassRequest(req)
@@ -210,12 +210,12 @@ export class RunningJob {
         }
         return resp.content
     }
-    async _setProjectFile(fileName: string, fileContent: string) {
-        const req: SetProjectFileRequest = {
-            type: 'setProjectFile',
+    async _setFile(fileName: string, fileContent: string) {
+        const req: SetFileRequest = {
+            type: 'setFile',
             timestamp: Date.now() / 1000,
-            workspaceId: this.scriptJob.workspaceId,
-            projectId: this.scriptJob.projectId,
+            workspaceId: this.job.workspaceId,
+            projectId: this.job.projectId,
             fileName,
             fileContent
         }
@@ -223,14 +223,14 @@ export class RunningJob {
         if (!resp) {
             throw Error('Unable to set project file')
         }
-        if (resp.type !== 'setProjectFile') {
+        if (resp.type !== 'setFile') {
             console.warn(resp)
-            throw Error('Unexpected response type. Expected setProjectFile')
+            throw Error('Unexpected response type. Expected setFile')
         }
     }
-    private async _loadProjectFiles(projectId: string): Promise<SPProjectFile[]> {
-        const req: GetProjectFilesRequest = {
-            type: 'getProjectFiles',
+    private async _loadFiles(projectId: string): Promise<NBFile[]> {
+        const req: GetFilesRequest = {
+            type: 'getFiles',
             timestamp: Date.now() / 1000,
             projectId
         }
@@ -238,11 +238,11 @@ export class RunningJob {
         if (!resp) {
             throw Error('Unable to get project')
         }
-        if (resp.type !== 'getProjectFiles') {
+        if (resp.type !== 'getFiles') {
             console.warn(resp)
-            throw Error('Unexpected response type. Expected getProjectFiles')
+            throw Error('Unexpected response type. Expected getFiles')
         }
-        return resp.projectFiles
+        return resp.files
     }
     private async _run() {
         if (this.#childProcess) {
@@ -253,21 +253,21 @@ export class RunningJob {
         let lastUpdateConsoleOutputTimestamp = Date.now()
         const updateConsoleOutput = async () => {
             lastUpdateConsoleOutputTimestamp = Date.now()
-            await this._setScriptJobProperty('consoleOutput', consoleOutput)
+            await this._setJobProperty('consoleOutput', consoleOutput)
         }
         const timer = Date.now()
 
         try {
-            const scriptFileName = this.scriptJob.scriptFileName
-            const scriptFileContent = await this._loadFileContent(this.scriptJob.scriptFileName)
-            const scriptJobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.scriptJob.scriptJobId)
-            fs.mkdirSync(scriptJobDir, {recursive: true})
-            fs.writeFileSync(path.join(scriptJobDir, scriptFileName), scriptFileContent)
+            const scriptFileName = this.job.scriptFileName
+            const scriptFileContent = await this._loadFileContent(this.job.scriptFileName)
+            const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.job.jobId)
+            fs.mkdirSync(jobDir, {recursive: true})
+            fs.writeFileSync(path.join(jobDir, scriptFileName), scriptFileContent)
 
-            const projectFiles = await this._loadProjectFiles(this.scriptJob.projectId)
+            const files = await this._loadFiles(this.job.projectId)
 
             if (scriptFileName.endsWith('.py')) {
-                for (const pf of projectFiles) {
+                for (const pf of files) {
                     let includeFile = false
                     if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
                         // the file is referenced in the script
@@ -282,7 +282,7 @@ export class RunningJob {
                     }
                     if (includeFile) {
                         const content = await this._loadFileContent(pf.fileName)
-                        fs.writeFileSync(path.join(scriptJobDir, pf.fileName), content)
+                        fs.writeFileSync(path.join(jobDir, pf.fileName), content)
                     }
                 }
             }
@@ -309,12 +309,12 @@ export class RunningJob {
                     if (!recordingNwbFile) {
                         throw new Error('Missing recording_nwb_file')
                     }
-                    const x = projectFiles.find(pf => pf.fileName === recordingNwbFile)
+                    const x = files.find(pf => pf.fileName === recordingNwbFile)
                     if (!x) {
                         throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
                     }
                     const recordingNwbFileContent = await this._loadFileContent(recordingNwbFile)
-                    fs.writeFileSync(path.join(scriptJobDir, recordingNwbFile), recordingNwbFileContent)
+                    fs.writeFileSync(path.join(jobDir, recordingNwbFile), recordingNwbFileContent)
                     const recordingElectricalSeriesPath = nba['recording_electrical_series_path']
                     if (!recordingElectricalSeriesPath) {
                         throw new Error('Missing recording_electrical_series_path')
@@ -329,16 +329,16 @@ export class RunningJob {
                 else {
                     throw new Error(`Unexpected nba type: ${nbaType}`)
                 }
-                fs.writeFileSync(path.join(scriptJobDir, 'run.py'), runPyContent)
+                fs.writeFileSync(path.join(jobDir, 'run.py'), runPyContent)
 
                 // write all the .py files in the analysisScriptsDir/helpers
-                fs.mkdirSync(path.join(scriptJobDir, 'helpers'), {recursive: true})
+                fs.mkdirSync(path.join(jobDir, 'helpers'), {recursive: true})
                 const helpersDir = path.join(analysisScriptsDir, 'helpers')
                 const helperFiles = fs.readdirSync(helpersDir)
                 for (const helperFile of helperFiles) {
                     if (helperFile.endsWith('.py')) {
                         const helperFileContent = fs.readFileSync(path.join(helpersDir, helperFile), 'utf8')
-                        fs.writeFileSync(path.join(scriptJobDir, 'helpers', helperFile), helperFileContent)
+                        fs.writeFileSync(path.join(jobDir, 'helpers', helperFile), helperFileContent)
                     }
                 }
 
@@ -353,7 +353,7 @@ export class RunningJob {
     export NBA_FILE_NAME="${nbaFileName}"
     ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
     `
-                fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
+                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
             }
             else if (scriptFileName.endsWith('.py')) {
                 const runShContent = `
@@ -366,13 +366,13 @@ export class RunningJob {
     trap clean_up EXIT
     python3 ${scriptFileName}
     `
-                fs.writeFileSync(path.join(scriptJobDir, 'run.sh'), runShContent)
+                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
             }
 
             const uploadNbaOutput = async () => {
-                const NbaOutput = await loadNbaOutput(`${scriptJobDir}/output`)
-                console.info(`Uploading NBA output to ${scriptFileName}.out (${this.scriptJob.scriptJobId})`)
-                await this._setProjectFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
+                const NbaOutput = await loadNbaOutput(`${jobDir}/output`)
+                console.info(`Uploading NBA output to ${scriptFileName}.out (${this.job.jobId})`)
+                await this._setFile(`${scriptFileName}.out`, JSON.stringify(NbaOutput))
             }
 
             await new Promise<void>((resolve, reject) => {
@@ -389,7 +389,7 @@ export class RunningJob {
                     containerMethod = 'none'
                 }
 
-                const absScriptJobDir = path.resolve(scriptJobDir)
+                const absJobDir = path.resolve(jobDir)
 
                 if (containerMethod === 'singularity') {
                     cmd = 'singularity'
@@ -397,7 +397,7 @@ export class RunningJob {
                         'exec',
                         '-C', // do not mount home directory, tmp directory, etc
                         '--pwd', '/working',
-                        '--bind', `${absScriptJobDir}:/working`
+                        '--bind', `${absJobDir}:/working`
                     ]
                     if (scriptFileName.endsWith('.py')) {
                         args = [...args, ...[
@@ -424,7 +424,7 @@ export class RunningJob {
                     args = [
                         'run',
                         '--rm', // remove container after running
-                        '-v', `${absScriptJobDir}:/working`,
+                        '-v', `${absJobDir}:/working`,
                         '-w', '/working'
                     ]
                     if (scriptFileName.endsWith('.py')) {
@@ -462,12 +462,12 @@ export class RunningJob {
                 const timeoutSec = 60 * 60 * 3 // 3 hours
 
                 this.#childProcess = spawn(cmd, args, {
-                    cwd: scriptJobDir
+                    cwd: jobDir
                 })
 
                 const timeoutId = setTimeout(() => {
                     if (returned) return
-                    console.info(`Killing script job: ${this.scriptJob.scriptJobId} - ${this.scriptJob.scriptFileName} due to timeout`)
+                    console.info(`Killing job: ${this.job.jobId} - ${this.job.scriptFileName} due to timeout`)
                     returned = true
                     this.#childProcess.kill()
                     reject(Error('Timeout'))
@@ -513,11 +513,11 @@ export class RunningJob {
             }
             else {
                 const outputFileNames: string[] = []
-                const files = fs.readdirSync(scriptJobDir)
+                const files = fs.readdirSync(jobDir)
                 for (const file of files) {
                     if ((file !== scriptFileName) && (file !== 'run.sh')) {
                         // check whether it is a file
-                        const stat = fs.statSync(path.join(scriptJobDir, file))
+                        const stat = fs.statSync(path.join(jobDir, file))
                         if (stat.isFile()) {
                             outputFileNames.push(file)
                         }
@@ -526,39 +526,39 @@ export class RunningJob {
                 const maxOutputFiles = 5
                 if (outputFileNames.length > maxOutputFiles) {
                     console.info('Too many output files.')
-                    await this._setScriptJobProperty('error', 'Too many output files.')
-                    await this._setScriptJobProperty('status', 'failed')
+                    await this._setJobProperty('error', 'Too many output files.')
+                    await this._setJobProperty('status', 'failed')
                     this.#status = 'failed'
 
                     const elapsedSec = (Date.now() - timer) / 1000
-                    await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
+                    await this._setJobProperty('elapsedTimeSec', elapsedSec)
 
                     this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
                     return
                 }
                 for (const outputFileName of outputFileNames) {
                     console.info('Uploading output file: ' + outputFileName)
-                    const content = fs.readFileSync(path.join(scriptJobDir, outputFileName), 'utf8')
-                    await this._setProjectFile(outputFileName, content)
+                    const content = fs.readFileSync(path.join(jobDir, outputFileName), 'utf8')
+                    await this._setFile(outputFileName, content)
                 }
             }
 
-            await this._setScriptJobProperty('status', 'completed')
+            await this._setJobProperty('status', 'completed')
             this.#status = 'completed'
 
             const elapsedSec = (Date.now() - timer) / 1000
-            await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
+            await this._setJobProperty('elapsedTimeSec', elapsedSec)
 
             this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
         }
         catch (err) {
             await updateConsoleOutput()
-            await this._setScriptJobProperty('error', err.message)
-            await this._setScriptJobProperty('status', 'failed')
+            await this._setJobProperty('error', err.message)
+            await this._setJobProperty('status', 'failed')
             this.#status = 'failed'
 
             const elapsedSec = (Date.now() - timer) / 1000
-            await this._setScriptJobProperty('elapsedTimeSec', elapsedSec)
+            await this._setJobProperty('elapsedTimeSec', elapsedSec)
 
             this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
             return
@@ -583,4 +583,4 @@ const loadNbaOutput = async (outputDir: string): Promise<NbaOutput> => {
 //     })
 // }
 
-export default ScriptJobManager
+export default JobManager

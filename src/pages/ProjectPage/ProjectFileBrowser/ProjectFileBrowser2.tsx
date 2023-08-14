@@ -5,13 +5,13 @@ import { Delete, DriveFileRenameOutline, FileCopy } from '@mui/icons-material';
 import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import SmallIconButton from '../../../components/SmallIconButton';
 import { timeAgoString } from '../../../timeStrings';
-import { SPProjectFile } from '../../../types/neurobass-types';
+import { NBFile } from '../../../types/neurobass-types';
 import { useProject } from '../ProjectPageContext';
 import './file-browser-table.css';
 import formatByteCount from './formatByteCount';
 
 type Props = {
-    projectFiles: SPProjectFile[] | undefined
+    files: NBFile[] | undefined
     onOpenFile: (path: string) => void
     onDeleteFile: (path: string) => void
     onDuplicateFile: (path: string) => void
@@ -27,12 +27,12 @@ type FileItem = {
     timestampModified: number
 }
 
-const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, projectFiles, hideSizeColumn}) => {
+const FileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, files, hideSizeColumn}) => {
     const {currentTabName} = useProject()
 
     const files = useMemo(() => {
         const ret: FileItem[] = []
-        for (const x of projectFiles || []) {
+        for (const x of files || []) {
             ret.push({
                 id: x.fileName,
                 name: x.fileName,
@@ -51,7 +51,7 @@ const ProjectFileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile
             return a.name.localeCompare(b.name)
         })
         return ret
-    }, [projectFiles, currentTabName])
+    }, [files, currentTabName])
 
     const [contextMenu, setContextMenu] = useState<{visible: boolean, x: number, y: number, fileId: string}>({ visible: false, x: 0, y: 0, fileId: '' })
 
@@ -168,4 +168,4 @@ const ContextMenu: FunctionComponent<{ x: number, y: number, fileId: string, onA
     )
 }
 
-export default ProjectFileBrowser2
+export default FileBrowser2

@@ -1,10 +1,10 @@
 import { FunctionComponent, useEffect, useMemo, useState } from "react";
 import Hyperlink from "../../components/Hyperlink";
 import ComputeResourceIdComponent from "../../ComputeResourceIdComponent";
-import { fetchScriptJobsForComputeResource } from "../../dbInterface/dbInterface";
+import { fetchJobsForComputeResource } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import { timeAgoString } from "../../timeStrings";
-import { SPScriptJob } from "../../types/neurobass-types";
+import { NBJob } from "../../types/neurobass-types";
 import UserIdComponent from "../../UserIdComponent";
 import useRoute from "../../useRoute";
 
@@ -12,30 +12,30 @@ type Props = {
     computeResourceId: string
 }
 
-const ComputeResourceScriptJobsTable: FunctionComponent<Props> = ({ computeResourceId }) => {
-    const [scriptJobs, setScriptJobs] = useState<SPScriptJob[] | undefined>()
+const ComputeResourceJobsTable: FunctionComponent<Props> = ({ computeResourceId }) => {
+    const [jobs, setJobs] = useState<NBJob[] | undefined>()
 
     const {accessToken, userId} = useGithubAuth()
     const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
 
     useEffect(() => {
         (async () => {
-            const sj = await fetchScriptJobsForComputeResource(computeResourceId, auth)
-            setScriptJobs(sj)
+            const sj = await fetchJobsForComputeResource(computeResourceId, auth)
+            setJobs(sj)
         })()
     }, [computeResourceId, auth])
 
-    const sortedScriptJobs = useMemo(() => {
-        return scriptJobs ? [...scriptJobs].sort((a, b) => (b.timestampCreated - a.timestampCreated))
+    const sortedJobs = useMemo(() => {
+        return jobs ? [...jobs].sort((a, b) => (b.timestampCreated - a.timestampCreated))
             .sort((a, b) => {
                 const statuses = ['running', 'pending', 'failed', 'completed']
                 return statuses.indexOf(a.status) - statuses.indexOf(b.status)
             }) : undefined
-    }, [scriptJobs])
+    }, [jobs])
 
     const {setRoute} = useRoute()
 
-    if (!sortedScriptJobs) {
+    if (!sortedJobs) {
         return <div>Loading...</div>
     }
 
@@ -56,15 +56,15 @@ const ComputeResourceScriptJobsTable: FunctionComponent<Props> = ({ computeResou
             </thead>
             <tbody>
                 {
-                    sortedScriptJobs.map((jj) => (
-                        <tr key={jj.scriptJobId}>
+                    sortedJobs.map((jj) => (
+                        <tr key={jj.jobId}>
                             <td>{
                                 // (workspaceRole === 'admin' || workspaceRole === 'editor') && (
                                 //     <JobRowActions job={jj} />
                                 // )
                             }</td>
                             <td>
-                                {jj.scriptJobId}
+                                {jj.jobId}
                             </td>
                             <td>
                                 <Hyperlink onClick={() => setRoute({page: 'workspace', workspaceId: jj.workspaceId})}>{jj.workspaceId}</Hyperlink>
@@ -93,4 +93,4 @@ const ComputeResourceScriptJobsTable: FunctionComponent<Props> = ({ computeResou
     )
 }
 
-export default ComputeResourceScriptJobsTable
+export default ComputeResourceJobsTable

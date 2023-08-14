@@ -1,5 +1,5 @@
 import { GetComputeResourcesRequest, GetComputeResourcesResponse } from "../../src/types/NeurobassRequest";
-import { isSPComputeResource } from "../../src/types/neurobass-types";
+import { isNBComputeResource } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import removeIdField from "../removeIdField";
 
@@ -11,7 +11,7 @@ const getComputeResourcesHandler = async (request: GetComputeResourcesRequest, o
     
     const computeResources = removeIdField(await computeResourcesCollection.find({ownerId: userId}).toArray())
     for (const cr of computeResources) {
-        if (!isSPComputeResource(cr)) {
+        if (!isNBComputeResource(cr)) {
             console.warn(cr)
             throw new Error('Invalid compute resource in database (1)')
         }

@@ -1,5 +1,5 @@
 import { FunctionComponent, useCallback, useEffect, useMemo } from "react";
-import { fetchDataBlob, fetchProjectFile, setProjectFileContent } from "../../../dbInterface/dbInterface";
+import { fetchDataBlob, fetchFile, setFileContent } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
 import { useProject } from "../ProjectPageContext";
 import ScriptFileEditor from "./ScriptFileEditor";
@@ -19,7 +19,7 @@ type Props = {
     height: number
 }
 
-const ProjectFileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, setFileContent, editedFileContent, setEditedFileContent, width, height}) => {
+const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, setFileContent, editedFileContent, setEditedFileContent, width, height}) => {
     const {projectId, workspaceId} = useProject()
 
     const {accessToken, userId} = useGithubAuth()
@@ -37,7 +37,7 @@ const ProjectFileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileCo
         let canceled = false
         if (fileContent !== undefined) return
         ;(async () => {
-            const pf = await fetchProjectFile(projectId, fileName, auth)
+            const pf = await fetchFile(projectId, fileName, auth)
             if (canceled) return
             const sha1 = pf?.contentSha1
             if (!sha1) return
@@ -51,7 +51,7 @@ const ProjectFileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileCo
     const handleSaveContent = useCallback(async (text: string) => {
         let canceled = false
         ;(async () => {
-            await setProjectFileContent(workspaceId, projectId, fileName, text, auth)
+            await setFileContent(workspaceId, projectId, fileName, text, auth)
             if (canceled) return
             setFileContent(undefined) // trigger reloading
         })()
@@ -126,4 +126,4 @@ const ProjectFileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileCo
     }
 }
 
-export default ProjectFileEditor
+export default FileEditor

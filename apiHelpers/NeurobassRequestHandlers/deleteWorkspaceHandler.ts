@@ -16,11 +16,11 @@ const deleteWorkspaceHandler = async (request: DeleteWorkspaceRequest, o: {verif
     const projectsCollection = client.db('neurobass').collection('projects')
     projectsCollection.deleteMany({workspaceId: request.workspaceId})
 
-    const projectFilesCollection = client.db('neurobass').collection('projectFiles')
-    projectFilesCollection.deleteMany({workspaceId: request.workspaceId})
+    const filesCollection = client.db('neurobass').collection('files')
+    filesCollection.deleteMany({workspaceId: request.workspaceId})
 
-    const scriptJobsCollection = client.db('neurobass').collection('scriptJobs')
-    scriptJobsCollection.deleteMany({workspaceId: request.workspaceId})
+    const jobsCollection = client.db('neurobass').collection('jobs')
+    jobsCollection.deleteMany({workspaceId: request.workspaceId})
 
     const dataBlobsCollection = client.db('neurobass').collection('dataBlobs')
     dataBlobsCollection.deleteMany({workspaceId: request.workspaceId})

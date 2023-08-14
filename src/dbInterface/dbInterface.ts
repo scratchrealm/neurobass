@@ -1,8 +1,8 @@
-import { CreateProjectRequest, CreateScriptJobRequest, CreateWorkspaceRequest, DeleteProjectFileRequest, DeleteProjectRequest, DeleteCompletedScriptJobsRequest, DeleteComputeResourceRequest, DeleteScriptJobRequest, DeleteWorkspaceRequest, GetProjectsRequest, GetProjectFileRequest, GetProjectFilesRequest, GetProjectRequest, GetComputeResourcesRequest, GetDataBlobRequest, GetScriptJobRequest, GetScriptJobsRequest, GetWorkspaceRequest, GetWorkspacesRequest, RegisterComputeResourceRequest, SetProjectFileRequest, SetProjectPropertyRequest, SetWorkspacePropertyRequest, SetWorkspaceUsersRequest, DuplicateProjectFileRequest, RenameProjectFileRequest, CloneProjectRequest, GetComputeResourceRequest } from "../types/NeurobassRequest";
-import { SPProject, SPProjectFile, SPComputeResource, SPScriptJob, SPWorkspace } from "../types/neurobass-types";
+import { CreateProjectRequest, CreateJobRequest, CreateWorkspaceRequest, DeleteFileRequest, DeleteProjectRequest, DeleteComputeResourceRequest, DeleteJobRequest, DeleteWorkspaceRequest, GetProjectsRequest, GetFileRequest, GetFilesRequest, GetProjectRequest, GetComputeResourcesRequest, GetDataBlobRequest, GetJobRequest, GetJobsRequest, GetWorkspaceRequest, GetWorkspacesRequest, RegisterComputeResourceRequest, SetFileRequest, SetProjectPropertyRequest, SetWorkspacePropertyRequest, SetWorkspaceUsersRequest, DuplicateFileRequest, RenameFileRequest, GetComputeResourceRequest } from "../types/NeurobassRequest";
+import { NBProject, NBFile, NBComputeResource, NBJob, NBWorkspace } from "../types/neurobass-types";
 import postNeurobassRequest from "./postNeurobassRequest";
 
-export const fetchWorkspaces = async (auth: Auth): Promise<SPWorkspace[]> => {
+export const fetchWorkspaces = async (auth: Auth): Promise<NBWorkspace[]> => {
     const req: GetWorkspacesRequest = {
         type: 'getWorkspaces',
         timestamp: Date.now() / 1000
@@ -14,7 +14,7 @@ export const fetchWorkspaces = async (auth: Auth): Promise<SPWorkspace[]> => {
     return resp.workspaces
 }
 
-export const fetchWorkspace = async (workspaceId: string, auth: Auth): Promise<SPWorkspace | undefined> => {
+export const fetchWorkspace = async (workspaceId: string, auth: Auth): Promise<NBWorkspace | undefined> => {
     const req: GetWorkspaceRequest = {
         type: 'getWorkspace',
         timestamp: Date.now() / 1000,
@@ -44,7 +44,7 @@ export const createWorkspace = async (workspaceName: string, auth: Auth): Promis
     return resp.workspaceId
 }
 
-export const fetchProjects = async (workspaceId: string, auth: Auth): Promise<SPProject[]> => {
+export const fetchProjects = async (workspaceId: string, auth: Auth): Promise<NBProject[]> => {
     const req: GetProjectsRequest = {
         type: 'getProjects',
         timestamp: Date.now() / 1000,
@@ -111,7 +111,7 @@ export const deleteWorkspace = async (workspaceId: string, auth: Auth): Promise<
     }
 }
 
-export const fetchProject = async (projectId: string, auth: Auth): Promise<SPProject | undefined> => {
+export const fetchProject = async (projectId: string, auth: Auth): Promise<NBProject | undefined> => {
     const req: GetProjectRequest = {
         type: 'getProject',
         timestamp: Date.now() / 1000,
@@ -124,31 +124,31 @@ export const fetchProject = async (projectId: string, auth: Auth): Promise<SPPro
     return resp.project
 }
 
-export const fetchProjectFiles = async (projectId: string, auth: Auth): Promise<SPProjectFile[]> => {
-    const req: GetProjectFilesRequest = {
-        type: 'getProjectFiles',
+export const fetchFiles = async (projectId: string, auth: Auth): Promise<NBFile[]> => {
+    const req: GetFilesRequest = {
+        type: 'getFiles',
         timestamp: Date.now() / 1000,
         projectId
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'getProjectFiles') {
-        throw Error(`Unexpected response type ${resp.type}. Expected getProjectFiles.`)
+    if (resp.type !== 'getFiles') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getFiles.`)
     }
-    return resp.projectFiles
+    return resp.files
 }
 
-export const fetchProjectFile = async (projectId: string, fileName: string, auth: Auth): Promise<SPProjectFile | undefined> => {
-    const req: GetProjectFileRequest = {
-        type: 'getProjectFile',
+export const fetchFile = async (projectId: string, fileName: string, auth: Auth): Promise<NBFile | undefined> => {
+    const req: GetFileRequest = {
+        type: 'getFile',
         timestamp: Date.now() / 1000,
         projectId,
         fileName
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'getProjectFile') {
-        throw Error(`Unexpected response type ${resp.type}. Expected getProjectFile.`)
+    if (resp.type !== 'getFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getFile.`)
     }
-    return resp.projectFile
+    return resp.file
 }
 
 export const fetchDataBlob = async (workspaceId: string, projectId: string, sha1: string, auth: Auth): Promise<string | undefined> => {
@@ -166,9 +166,9 @@ export const fetchDataBlob = async (workspaceId: string, projectId: string, sha1
     return resp.content
 }
 
-export const setProjectFileContent = async (workspaceId: string, projectId: string, fileName: string, fileContent: string, auth: Auth): Promise<void> => {
-    const req: SetProjectFileRequest = {
-        type: 'setProjectFile',
+export const setFileContent = async (workspaceId: string, projectId: string, fileName: string, fileContent: string, auth: Auth): Promise<void> => {
+    const req: SetFileRequest = {
+        type: 'setFile',
         timestamp: Date.now() / 1000,
         projectId,
         workspaceId,
@@ -176,28 +176,28 @@ export const setProjectFileContent = async (workspaceId: string, projectId: stri
         fileContent
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'setProjectFile') {
-        throw Error(`Unexpected response type ${resp.type}. Expected setProjectFile.`)
+    if (resp.type !== 'setFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected setFile.`)
     }
 }
 
-export const deleteProjectFile = async (workspaceId: string, projectId: string, fileName: string, auth: Auth): Promise<void> => {
-    const req: DeleteProjectFileRequest = {
-        type: 'deleteProjectFile',
+export const deleteFile = async (workspaceId: string, projectId: string, fileName: string, auth: Auth): Promise<void> => {
+    const req: DeleteFileRequest = {
+        type: 'deleteFile',
         timestamp: Date.now() / 1000,
         projectId,
         workspaceId,
         fileName
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'deleteProjectFile') {
-        throw Error(`Unexpected response type ${resp.type}. Expected deleteProjectFile.`)
+    if (resp.type !== 'deleteFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected deleteFile.`)
     }
 }
 
-export const duplicateProjectFile = async (workspaceId: string, projectId: string, fileName: string, newFileName: string, auth: Auth): Promise<void> => {
-    const req: DuplicateProjectFileRequest = {
-        type: 'duplicateProjectFile',
+export const duplicateFile = async (workspaceId: string, projectId: string, fileName: string, newFileName: string, auth: Auth): Promise<void> => {
+    const req: DuplicateFileRequest = {
+        type: 'duplicateFile',
         timestamp: Date.now() / 1000,
         projectId,
         workspaceId,
@@ -205,14 +205,14 @@ export const duplicateProjectFile = async (workspaceId: string, projectId: strin
         newFileName
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'duplicateProjectFile') {
-        throw Error(`Unexpected response type ${resp.type}. Expected duplicateProjectFile.`)
+    if (resp.type !== 'duplicateFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected duplicateFile.`)
     }
 }
 
-export const renameProjectFile = async (workspaceId: string, projectId: string, fileName: string, newFileName: string, auth: Auth): Promise<void> => {
-    const req: RenameProjectFileRequest = {
-        type: 'renameProjectFile',
+export const renameFile = async (workspaceId: string, projectId: string, fileName: string, newFileName: string, auth: Auth): Promise<void> => {
+    const req: RenameFileRequest = {
+        type: 'renameFile',
         timestamp: Date.now() / 1000,
         projectId,
         workspaceId,
@@ -220,8 +220,8 @@ export const renameProjectFile = async (workspaceId: string, projectId: string, 
         newFileName
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'renameProjectFile') {
-        throw Error(`Unexpected response type ${resp.type}. Expected renameProjectFile.`)
+    if (resp.type !== 'renameFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected renameFile.`)
     }
 }
 
@@ -238,21 +238,6 @@ export const deleteProject = async (workspaceId: string, projectId: string, auth
     }
 }
 
-export const cloneProject = async (workspaceId: string, projectId: string, newWorkspaceId: string, auth: Auth): Promise<string> => {
-    const req: CloneProjectRequest = {
-        type: 'cloneProject',
-        timestamp: Date.now() / 1000,
-        workspaceId,
-        projectId,
-        newWorkspaceId
-    }
-    const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'cloneProject') {
-        throw Error(`Unexpected response type ${resp.type}. Expected cloneProject.`)
-    }
-    return resp.newProjectId
-}
-
 export const setProjectProperty = async (projectId: string, property: 'name', value: any, auth: Auth): Promise<void> => {
     const req: SetProjectPropertyRequest = {
         type: 'setProjectProperty',
@@ -267,7 +252,7 @@ export const setProjectProperty = async (projectId: string, property: 'name', va
     }
 }
 
-export const fetchComputeResources = async (auth: Auth): Promise<SPComputeResource[]> => {
+export const fetchComputeResources = async (auth: Auth): Promise<NBComputeResource[]> => {
     const req: GetComputeResourcesRequest = {
         type: 'getComputeResources',
         timestamp: Date.now() / 1000
@@ -279,7 +264,7 @@ export const fetchComputeResources = async (auth: Auth): Promise<SPComputeResour
     return resp.computeResources
 }
 
-export const fetchComputeResource = async (computeResourceId: string, auth: Auth): Promise<SPComputeResource | undefined> => {
+export const fetchComputeResource = async (computeResourceId: string, auth: Auth): Promise<NBComputeResource | undefined> => {
     const req: GetComputeResourceRequest = {
         type: 'getComputeResource',
         timestamp: Date.now() / 1000,
@@ -318,9 +303,9 @@ export const deleteComputeResource = async (computeResourceId: string, auth: Aut
     }
 }
 
-export const createScriptJob = async (workspaceId: string, projectId: string, o: {scriptFileName: string, requiredResources?: {numCpus: number, ramGb: number, timeoutSec: number}}, auth: Auth): Promise<string> => {
-    const req: CreateScriptJobRequest = {
-        type: 'createScriptJob',
+export const createJob = async (workspaceId: string, projectId: string, o: {scriptFileName: string, requiredResources?: {numCpus: number, ramGb: number, timeoutSec: number}}, auth: Auth): Promise<string> => {
+    const req: CreateJobRequest = {
+        type: 'createJob',
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
@@ -328,77 +313,77 @@ export const createScriptJob = async (workspaceId: string, projectId: string, o:
         requiredResources: o.requiredResources
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'createScriptJob') {
-        throw Error(`Unexpected response type ${resp.type}. Expected createScriptJob.`)
+    if (resp.type !== 'createJob') {
+        throw Error(`Unexpected response type ${resp.type}. Expected createJob.`)
     }
-    return resp.scriptJobId
+    return resp.jobId
 }
 
-export const deleteScriptJob = async (workspaceId: string, projectId: string, scriptJobId: string, auth: Auth): Promise<void> => {
-    const req: DeleteScriptJobRequest = {
-        type: 'deleteScriptJob',
+export const deleteJob = async (workspaceId: string, projectId: string, jobId: string, auth: Auth): Promise<void> => {
+    const req: DeleteJobRequest = {
+        type: 'deleteJob',
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
-        scriptJobId
+        jobId
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'deleteScriptJob') {
-        throw Error(`Unexpected response type ${resp.type}. Expected deleteScriptJob.`)
+    if (resp.type !== 'deleteJob') {
+        throw Error(`Unexpected response type ${resp.type}. Expected deleteJob.`)
     }
 }
 
-export const deleteCompletedScriptJobs = async (workspaceId: string, projectId: string, scriptFileName: string, auth: Auth): Promise<void> => {
-    const req: DeleteCompletedScriptJobsRequest = {
-        type: 'deleteCompletedScriptJobs',
+export const deleteCompletedJobs = async (workspaceId: string, projectId: string, scriptFileName: string, auth: Auth): Promise<void> => {
+    const req: DeleteCompletedJobsRequest = {
+        type: 'deleteCompletedJobs',
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
         scriptFileName
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'deleteCompletedScriptJobs') {
-        throw Error(`Unexpected response type ${resp.type}. Expected deleteCompletedScriptJobs.`)
+    if (resp.type !== 'deleteCompletedJobs') {
+        throw Error(`Unexpected response type ${resp.type}. Expected deleteCompletedJobs.`)
     }
 }
 
-export const fetchScriptJobsForProject = async (projectId: string, auth: Auth): Promise<SPScriptJob[]> => {
-    const req: GetScriptJobsRequest = {
-        type: 'getScriptJobs',
+export const fetchJobsForProject = async (projectId: string, auth: Auth): Promise<NBJob[]> => {
+    const req: GetJobsRequest = {
+        type: 'getJobs',
         timestamp: Date.now() / 1000,
         projectId
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'getScriptJobs') {
-        throw Error(`Unexpected response type ${resp.type}. Expected getScriptJobs.`)
+    if (resp.type !== 'getJobs') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getJobs.`)
     }
-    return resp.scriptJobs
+    return resp.jobs
 }
 
-export const fetchScriptJobsForComputeResource = async (computeResourceId: string, auth: Auth): Promise<SPScriptJob[]> => {
-    const req: GetScriptJobsRequest = {
-        type: 'getScriptJobs',
+export const fetchJobsForComputeResource = async (computeResourceId: string, auth: Auth): Promise<NBJob[]> => {
+    const req: GetJobsRequest = {
+        type: 'getJobs',
         timestamp: Date.now() / 1000,
         computeResourceId
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'getScriptJobs') {
-        throw Error(`Unexpected response type ${resp.type}. Expected getScriptJobs.`)
+    if (resp.type !== 'getJobs') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getJobs.`)
     }
-    return resp.scriptJobs
+    return resp.jobs
 }
 
-export const fetchScriptJob = async (workspaceId: string, projectId: string, scriptJobId: string, auth: Auth): Promise<SPScriptJob | undefined> => {
-    const req: GetScriptJobRequest = {
-        type: 'getScriptJob',
+export const fetchJob = async (workspaceId: string, projectId: string, jobId: string, auth: Auth): Promise<NBJob | undefined> => {
+    const req: GetJobRequest = {
+        type: 'getJob',
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
-        scriptJobId
+        jobId
     }
     const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'getScriptJob') {
-        throw Error(`Unexpected response type ${resp.type}. Expected getScriptJob.`)
+    if (resp.type !== 'getJob') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getJob.`)
     }
-    return resp.scriptJob
+    return resp.job
 }

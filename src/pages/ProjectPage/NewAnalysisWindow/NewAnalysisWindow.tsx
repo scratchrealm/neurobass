@@ -14,12 +14,12 @@ recording_electrical_series_path: "/acquisition/ElectricalSeries"
 const NewAnalysisWindow: FunctionComponent<Props> = ({onCreateFile}) => {
     const [newFileName, setNewFileName] = useState('')
 
-    const {projectFiles} = useProject()
+    const {files} = useProject()
 
     const existingFileNames = useMemo(() => {
-        if (!projectFiles) return undefined
-        return projectFiles.map(f => f.fileName)
-    }, [projectFiles])
+        if (!files) return undefined
+        return files.map(f => f.fileName)
+    }, [files])
 
     const fileExists = useMemo(() => {
         if (!newFileName) return false

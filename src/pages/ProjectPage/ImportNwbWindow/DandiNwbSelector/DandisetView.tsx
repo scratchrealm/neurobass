@@ -1,6 +1,6 @@
 import { FunctionComponent, useEffect, useMemo, useReducer, useState } from "react"
 import Hyperlink from "../../../../components/Hyperlink"
-import formatByteCount from "../../ProjectFileBrowser/formatByteCount"
+import formatByteCount from "../../FileBrowser/formatByteCount"
 import { formatTime } from "./SearchResults"
 import { AssetsResponse, AssetsResponseItem, DandisetSearchResultItem, DandisetVersionInfo } from "./types"
 

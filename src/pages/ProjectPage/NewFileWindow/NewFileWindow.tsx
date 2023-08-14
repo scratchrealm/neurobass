@@ -15,12 +15,12 @@ const NewFileWindow: FunctionComponent<Props> = ({onCreateFile}) => {
     const [selection, setSelection] = useState(options[0].name)
     const [newFileName, setNewFileName] = useState('')
 
-    const {projectFiles} = useProject()
+    const {files} = useProject()
 
     const existingFileNames = useMemo(() => {
-        if (!projectFiles) return []
-        return projectFiles.map(f => f.fileName)
-    }, [projectFiles])
+        if (!files) return []
+        return files.map(f => f.fileName)
+    }, [files])
 
     const fileExists = useMemo(() => {
         if (!newFileName) return false

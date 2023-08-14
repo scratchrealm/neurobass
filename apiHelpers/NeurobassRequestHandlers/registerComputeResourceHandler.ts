@@ -1,5 +1,5 @@
 import { RegisterComputeResourceRequest, RegisterComputeResourceResponse } from "../../src/types/NeurobassRequest";
-import { SPComputeResource } from "../../src/types/neurobass-types";
+import { NBComputeResource } from "../../src/types/neurobass-types";
 import { getMongoClient } from "../getMongoClient";
 import JSONStringifyDeterministic from "../jsonStringifyDeterministic";
 import removeIdField from "../removeIdField";
@@ -28,7 +28,7 @@ const registerComputeResourceHandler = async (request: RegisterComputeResourceRe
         }})
     }
     else {
-        const x: SPComputeResource = {
+        const x: NBComputeResource = {
             computeResourceId,
             ownerId: userId,
             name: request.name,

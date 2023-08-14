@@ -1,14 +1,14 @@
 import React, { FunctionComponent, PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
 import { deleteComputeResource, fetchComputeResources } from '../../dbInterface/dbInterface';
 import { useGithubAuth } from '../../GithubAuth/useGithubAuth';
-import { SPComputeResource } from '../../types/neurobass-types';
+import { NBComputeResource } from '../../types/neurobass-types';
 
 type Props = {
     // none
 }
 
 type ComputeResourcesContextType = {
-    computeResources: SPComputeResource[]
+    computeResources: NBComputeResource[]
     refreshComputeResources: () => void
     deleteComputeResource: (computeResourceId: string) => void
 }
@@ -20,7 +20,7 @@ const ComputeResourcesContext = React.createContext<ComputeResourcesContextType>
 })
 
 export const SetupComputeResources: FunctionComponent<PropsWithChildren<Props>> = ({children}) => {
-    const [computeResources, setComputeResources] = useState<SPComputeResource[]>([])
+    const [computeResources, setComputeResources] = useState<NBComputeResource[]>([])
     const [refreshComputeResourcesCode, setRefreshComputeResourcesCode] = useState(0)
     const refreshComputeResources = useCallback(() => setRefreshComputeResourcesCode(rc => rc + 1), [])
 

@@ -76,12 +76,12 @@ def start_compute_resource_node(dir: str):
         if v:
             the_env[k] = v
 
-        compute_resource_id = os.getenv('COMPUTE_RESOURCE_ID', None)
-        compute_resource_private_key = os.getenv('COMPUTE_RESOURCE_PRIVATE_KEY', None)
-        if compute_resource_id is None:
-            raise ValueError('Compute resource has not been initialized in this directory, and the environment variable COMPUTE_RESOURCE_ID is not set.')
-        if compute_resource_private_key is None:
-            raise ValueError('Compute resource has not been initialized in this directory, and the environment variable COMPUTE_RESOURCE_PRIVATE_KEY is not set.')
+    compute_resource_id = the_env.get('COMPUTE_RESOURCE_ID', None)
+    compute_resource_private_key = the_env.get('COMPUTE_RESOURCE_PRIVATE_KEY', None)
+    if compute_resource_id is None:
+        raise ValueError('Compute resource has not been initialized in this directory, and the environment variable COMPUTE_RESOURCE_ID is not set.')
+    if compute_resource_private_key is None:
+        raise ValueError('Compute resource has not been initialized in this directory, and the environment variable COMPUTE_RESOURCE_PRIVATE_KEY is not set.')
 
     daemon = Daemon(dir=dir, the_env=the_env)
     daemon.start()

@@ -1,5 +1,5 @@
 import React, { FunctionComponent, PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
-import { createJob, deleteProject, deleteFile, deleteCompletedJobs, deleteJob, fetchProject, fetchFiles, fetchJobsForProject, setProjectProperty, duplicateFile, renameFile } from '../../dbInterface/dbInterface';
+import { createJob, deleteProject, deleteJob, fetchProject, fetchFiles, fetchJobsForProject, setProjectProperty, deleteFile, duplicateFile, renameFile } from '../../dbInterface/dbInterface';
 import { useGithubAuth } from '../../GithubAuth/useGithubAuth';
 import { onPubsubMessage } from '../../pubnub/pubnub';
 import { NBProject, NBFile, NBJob } from '../../types/neurobass-types';
@@ -129,7 +129,6 @@ type ProjectPageContextType = {
     createJob: (o: {scriptFileName: string}) => void
     deleteJob: (jobId: string) => void
     refreshJobs: () => void
-    deleteCompletedJobs: (o: {scriptFileName: string}) => void
     deleteFile: (fileName: string) => void
     duplicateFile: (fileName: string, newFileName: string) => void
     renameFile: (fileName: string, newFileName: string) => void
@@ -153,7 +152,6 @@ const ProjectPageContext = React.createContext<ProjectPageContextType>({
     createJob: () => {},
     deleteJob: () => {},
     refreshJobs: () => {},
-    deleteCompletedJobs: () => {},
     deleteFile: () => {},
     duplicateFile: () => {},
     renameFile: () => {},
@@ -247,34 +245,16 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
             console.warn(`Script file ${o.scriptFileName} has been edited but not saved. Not creating job.`)
             return
         }
-        let requiredResources: {numCpus: number, ramGb: number, timeoutSec: number} | undefined = undefined
-        if (o.scriptFileName.endsWith('.nba')) {
-            const nba: {[k: string]: any} = yaml.load(t.content || '') as any
-            if (nba.required_resources) {
-                requiredResources = {
-                    numCpus: nba.required_resources.num_cpus || 1,
-                    ramGb: nba.required_resources.ram_gb || 1,
-                    timeoutSec: nba.required_resources.timeout_sec || 180
-                }
-            }
-            else {
-                requiredResources = {
-                    numCpus: 1,
-                    ramGb: 1,
-                    timeoutSec: 180
-                }
-            }
-        }
-        else if (o.scriptFileName.endsWith('.py')) {
-            requiredResources = {
-                numCpus: 1,
-                ramGb: 1,
-                timeoutSec: 10
-            }
-        }
         const oo = {
-            scriptFileName: o.scriptFileName,
-            requiredResources
+            processType: 'script',
+            inputFiles: [],
+            inputParameters: [
+                {
+                    name: 'script_file',
+                    value: o.scriptFileName
+                }
+            ],
+            outputFiles: []
         }
         await createJob(project.workspaceId, projectId, oo, auth)
         refreshJobs()
@@ -283,12 +263,6 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
     const deleteJobHandler = useCallback(async (jobId: string) => {
         if (!project) return
         await deleteJob(project.workspaceId, projectId, jobId, auth)
-        refreshJobs()
-    }, [project, projectId, refreshJobs, auth])
-
-    const deleteCompletedJobsHandler = useCallback(async (o: {scriptFileName: string}) => {
-        if (!project) return
-        await deleteCompletedJobs(project.workspaceId, projectId, o.scriptFileName, auth)
         refreshJobs()
     }, [project, projectId, refreshJobs, auth])
 
@@ -302,19 +276,19 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
         refreshProject()
     }, [projectId, refreshProject, auth])
 
-    const deleteFile = useCallback(async (fileName: string) => {
+    const deleteFileHandler = useCallback(async (fileName: string) => {
         if (!project) return
         await deleteFile(project.workspaceId, projectId, fileName, auth)
         refreshFiles()
     }, [project, projectId, refreshFiles, auth])
 
-    const duplicateFile = useCallback(async (fileName: string, newFileName: string) => {
+    const duplicateFileHandler = useCallback(async (fileName: string, newFileName: string) => {
         if (!project) return
         await duplicateFile(project.workspaceId, projectId, fileName, newFileName, auth)
         refreshFiles()
     }, [project, projectId, refreshFiles, auth])
 
-    const renameFile = useCallback(async (fileName: string, newFileName: string) => {
+    const renameFileHandler = useCallback(async (fileName: string, newFileName: string) => {
         if (!project) return
         await renameFile(project.workspaceId, projectId, fileName, newFileName, auth)
         refreshFiles()
@@ -347,12 +321,11 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
         refreshJobs,
         createJob: createJobHandler,
         deleteJob: deleteJobHandler,
-        deleteCompletedJobs: deleteCompletedJobsHandler,
-        deleteFile,
-        duplicateFile,
-        renameFile,
+        deleteFile: deleteFileHandler,
+        duplicateFile: duplicateFileHandler,
+        renameFile: renameFileHandler,
         fileHasBeenEdited
-    }), [project, files, projectId, refreshFiles, openTabs, deleteProjectHandler, setProjectPropertyHandler, refreshJobs, jobs, createJobHandler, deleteJobHandler, deleteCompletedJobsHandler, deleteFile, duplicateFile, renameFile, fileHasBeenEdited])
+    }), [project, files, projectId, refreshFiles, openTabs, deleteProjectHandler, setProjectPropertyHandler, refreshJobs, jobs, createJobHandler, deleteJobHandler, deleteFileHandler, duplicateFileHandler, renameFileHandler, fileHasBeenEdited])
 
     return (
         <ProjectPageContext.Provider value={value}>

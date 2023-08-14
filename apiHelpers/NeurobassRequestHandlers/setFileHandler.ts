@@ -28,7 +28,7 @@ const setFileHandler = async (request: SetFileRequest, o: {verifiedClientId?: st
     }
 
     let content: string | undefined = undefined
-    if (request.fileData) {
+    if (request.fileData != undefined) {
         if (request.content) {
             throw Error('Cannot specify both fileData and content')
         }
@@ -87,8 +87,10 @@ const setFileHandler = async (request: SetFileRequest, o: {verifiedClientId?: st
         size: request.size,
         timestampCreated: Date.now() / 1000,
         content,
-        metadata: request.metadata,
-        jobId: request.jobId
+        metadata: request.metadata
+    }
+    if (request.jobId) {
+        newFile.jobId = request.jobId
     }
     await filesCollection.insertOne(newFile)
 

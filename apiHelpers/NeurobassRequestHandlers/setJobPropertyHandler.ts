@@ -22,6 +22,7 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
     }
     if (!isNBJob(job)) {
         console.warn(job)
+
         throw new Error('Invalid job in database (4)')
     }
     if ((job.projectId !== request.projectId) || (job.workspaceId !== request.workspaceId)) {
@@ -77,7 +78,6 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
     else {
         throw new Error(`Invalid property: ${request.property}`)
     }
-    update.timestampModified = Date.now() / 1000
 
     if (request.computeResourceNodeId) {
         update.computeResourceNodeId = request.computeResourceNodeId

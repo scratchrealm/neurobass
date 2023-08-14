@@ -48,9 +48,8 @@ def init_compute_resource_node(*, dir: str, compute_resource_id: Optional[str]=N
         host_name = socket.gethostname()
         the_env['NODE_NAME'] = input(f'Enter a name for this compute resource node (default: {host_name}): ') or host_name
 
-        x = '\n'.join([f'{k}: "{the_env[v]}"' for k in env_var_keys])
         with open(env_fname, 'w') as f:
-            yaml.dump(x, f)
+            yaml.dump(the_env, f)
     elif compute_resource_id is not None or compute_resource_private_key is not None:
         raise ValueError('Cannot specify compute_resource_id or compute_resource_private_key if compute resource node is already initialized.')
     

@@ -1,4 +1,4 @@
-import { NBJob } from "../../src/types/neurobass-types";
+import { isNBFile, NBJob } from "../../src/types/neurobass-types";
 import { CreateJobRequest, CreateJobResponse } from "../../src/types/NeurobassRequest";
 import createRandomId from "../createRandomId";
 import { getMongoClient } from "../getMongoClient";
@@ -6,6 +6,7 @@ import getProject from "../getProject";
 import getPubnubClient from "../getPubnubClient";
 import getWorkspace from "../getWorkspace";
 import getWorkspaceRole from "../getWorkspaceRole";
+import removeIdField from "../removeIdField";
 
 const createJobHandler = async (request: CreateJobRequest, o: {verifiedClientId?: string, verifiedUserId?: string}): Promise<CreateJobResponse> => {
     const userId = o.verifiedUserId
@@ -13,6 +14,8 @@ const createJobHandler = async (request: CreateJobRequest, o: {verifiedClientId?
 
     const workspace = await getWorkspace(workspaceId, {useCache: false})
     const workspaceRole = getWorkspaceRole(workspace, userId)
+
+    const client = await getMongoClient()
 
     if (!userId) {
         throw new Error('User must be logged in to create jobs')
@@ -37,7 +40,31 @@ const createJobHandler = async (request: CreateJobRequest, o: {verifiedClientId?
         throw new Error('Incorrect workspace ID')
     }
 
-    const client = await getMongoClient()
+    const filesCollection = client.db('neurobass').collection('files')
+
+    const inputFiles: {
+        name: string,
+        fileId: string,
+        fileName: string
+    }[] = []
+    for (const inputFile of request.inputFiles) {
+        const file = removeIdField(await filesCollection.findOne({
+            projectId: request.projectId,
+            fileName: inputFile.fileName
+        }))
+        if (!file) {
+            throw new Error('Project input file does not exist: ' + inputFile.fileName)
+        }
+        if (!isNBFile(file)) {
+            console.warn(file)
+            throw new Error('Invalid project file in database (x)')
+        }
+        inputFiles.push({
+            name: inputFile.name,
+            fileId: file.fileId,
+            fileName: file.fileName
+        })
+    }
 
     const jobId = createRandomId(8)
 
@@ -47,8 +74,8 @@ const createJobHandler = async (request: CreateJobRequest, o: {verifiedClientId?
         projectId: request.projectId,
         userId,
         processType: request.processType,
-        inputFiles: request.inputFiles,
-        inputFileIds: request.inputFiles.map(x => x.fileId),
+        inputFiles,
+        inputFileIds: inputFiles.map(x => x.fileId),
         inputParameters: request.inputParameters,
         outputFiles: request.outputFiles,
         timestampCreated: Date.now() / 1000,

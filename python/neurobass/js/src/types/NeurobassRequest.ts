@@ -663,7 +663,6 @@ export type CreateJobRequest = {
     processType: string
     inputFiles: {
         name: string
-        fileId: string
         fileName: string
     }[]
     inputParameters: {
@@ -685,7 +684,6 @@ export const isCreateJobRequest = (x: any): x is CreateJobRequest => {
         processType: isString,
         inputFiles: isArrayOf(y => (validateObject(y, {
             name: isString,
-            fileId: isString,
             fileName: isString
         }))),
         inputParameters: isArrayOf(y => (validateObject(y, {

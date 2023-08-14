@@ -1,12 +1,12 @@
 import { FunctionComponent, useCallback, useEffect, useMemo } from "react";
-import { fetchDataBlob, fetchFile, setFileContent } from "../../../dbInterface/dbInterface";
+import { fetchFile, fetchFileText, setFileText } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
 import { useProject } from "../ProjectPageContext";
-import ScriptFileEditor from "./ScriptFileEditor";
 import NbaOutputFileEditor from "./NbaOutputFileEditor/NbaOutputFileEditor";
+import NwbFileEditor from "./NwbFileEditor";
+import ScriptFileEditor from "./ScriptFileEditor";
 import StanFileEditor from "./StanFileEditor";
 import TextFileEditor from "./TextFileEditor";
-import NwbFileEditor from "./NwbFileEditor";
 
 type Props = {
     fileName: string
@@ -39,11 +39,18 @@ const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, 
         ;(async () => {
             const pf = await fetchFile(projectId, fileName, auth)
             if (canceled) return
-            const sha1 = pf?.contentSha1
-            if (!sha1) return
-            const txt = await fetchDataBlob(workspaceId, projectId, sha1, auth)
-            if (canceled) return
-            setFileContent(txt || '')
+            if (!pf) {
+                setFileContent(undefined)
+                return
+            }
+            if (pf.content.startsWith('url:')) {
+                setFileContent(undefined)
+            }
+            else {
+                const txt = await fetchFileText(pf, auth)
+                if (canceled) return
+                setFileContent(txt || '')
+            }
         })()
         return () => {canceled = true}
     }, [fileName, projectId, workspaceId, fileContent, setFileContent, auth])
@@ -51,7 +58,7 @@ const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, 
     const handleSaveContent = useCallback(async (text: string) => {
         let canceled = false
         ;(async () => {
-            await setFileContent(workspaceId, projectId, fileName, text, auth)
+            await setFileText(workspaceId, projectId, fileName, text, auth)
             if (canceled) return
             setFileContent(undefined) // trigger reloading
         })()
@@ -90,11 +97,6 @@ const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, 
         return (
             <NwbFileEditor
                 fileName={fileName}
-                fileContent={fileContent || ''}
-                onSaveContent={handleSaveContent}
-                editedFileContent={editedFileContent || ''}
-                setEditedFileContent={setEditedFileContent}
-                readOnly={readOnly}
                 width={width}
                 height={height}
             />

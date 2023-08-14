@@ -151,6 +151,22 @@ export const fetchFile = async (projectId: string, fileName: string, auth: Auth)
     return resp.file
 }
 
+export const fetchFileText = async (file: NBFile, auth: Auth): Promise<string | undefined> => {
+    if (file.content.startsWith('blob:')) {
+        const sha1 = file.content.slice('blob:'.length)
+        const txt = await fetchDataBlob(file.workspaceId, file.projectId, sha1, {})
+        return txt
+    }
+    else if (file.content.startsWith('data:')) {
+        const txt = file.content.slice('data:'.length)
+        return txt
+    }
+    else {
+        throw Error(`Unable to fetch file text for file ${file.fileName}`)
+    }
+}
+
+
 export const fetchDataBlob = async (workspaceId: string, projectId: string, sha1: string, auth: Auth): Promise<string | undefined> => {
     const req: GetDataBlobRequest = {
         type: 'getDataBlob',
@@ -166,14 +182,69 @@ export const fetchDataBlob = async (workspaceId: string, projectId: string, sha1
     return resp.content
 }
 
-export const setFileContent = async (workspaceId: string, projectId: string, fileName: string, fileContent: string, auth: Auth): Promise<void> => {
+export const setFileText = async (workspaceId: string, projectId: string, fileName: string, fileContent: string, auth: Auth): Promise<void> => {
     const req: SetFileRequest = {
         type: 'setFile',
         timestamp: Date.now() / 1000,
         projectId,
         workspaceId,
         fileName,
-        fileContent
+        fileData: fileContent,
+        size: fileContent.length,
+        metadata: {}
+    }
+    const resp = await postNeurobassRequest(req, {...auth})
+    if (resp.type !== 'setFile') {
+        throw Error(`Unexpected response type ${resp.type}. Expected setFile.`)
+    }
+}
+
+export const headRequest = async (url: string) => {
+    // Cannot use HEAD, because it is not allowed by CORS on DANDI AWS bucket
+    // let headResponse
+    // try {
+    //     headResponse = await fetch(url, {method: 'HEAD'})
+    //     if (headResponse.status !== 200) {
+    //         return undefined
+    //     }
+    // }
+    // catch(err: any) {
+    //     console.warn(`Unable to HEAD ${url}: ${err.message}`)
+    //     return undefined
+    // }
+    // return headResponse
+
+    // Instead, use aborted GET.
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const response = await fetch(url, { signal })
+    controller.abort();
+    return response
+}
+
+const getSizeForRemoteFile = async (url: string): Promise<number> => {
+    const response = await headRequest(url)
+    if (!response) {
+        throw Error(`Unable to HEAD ${url}`)
+    }
+    const size = Number(response.headers.get('content-length'))
+    if (isNaN(size)) {
+        throw Error(`Unable to get content-length for ${url}`)
+    }
+    return size
+}
+
+export const setUrlFile = async (workspaceId: string, projectId: string, fileName: string, url: string, metadata: any, auth: Auth): Promise<void> => {
+    const size = await getSizeForRemoteFile(url)
+    const req: SetFileRequest = {
+        type: 'setFile',
+        timestamp: Date.now() / 1000,
+        projectId,
+        workspaceId,
+        fileName,
+        content: `url:${url}`,
+        size,
+        metadata
     }
     const resp = await postNeurobassRequest(req, {...auth})
     if (resp.type !== 'setFile') {
@@ -303,14 +374,35 @@ export const deleteComputeResource = async (computeResourceId: string, auth: Aut
     }
 }
 
-export const createJob = async (workspaceId: string, projectId: string, o: {scriptFileName: string, requiredResources?: {numCpus: number, ramGb: number, timeoutSec: number}}, auth: Auth): Promise<string> => {
+export const createJob = async (
+    workspaceId: string,
+    projectId: string,
+    o: {
+        processType: string,
+        inputFiles: {
+            name: string
+            fileName: string
+        }[],
+        inputParameters: {
+            name: string
+            value: any
+        }[],
+        outputFiles: {
+            name: string
+            fileName: string
+        }[]
+    },
+    auth: Auth)
+: Promise<string> => {
     const req: CreateJobRequest = {
         type: 'createJob',
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
-        scriptFileName: o.scriptFileName,
-        requiredResources: o.requiredResources
+        processType: o.processType,
+        inputFiles: o.inputFiles,
+        inputParameters: o.inputParameters,
+        outputFiles: o.outputFiles
     }
     const resp = await postNeurobassRequest(req, {...auth})
     if (resp.type !== 'createJob') {
@@ -330,20 +422,6 @@ export const deleteJob = async (workspaceId: string, projectId: string, jobId: s
     const resp = await postNeurobassRequest(req, {...auth})
     if (resp.type !== 'deleteJob') {
         throw Error(`Unexpected response type ${resp.type}. Expected deleteJob.`)
-    }
-}
-
-export const deleteCompletedJobs = async (workspaceId: string, projectId: string, scriptFileName: string, auth: Auth): Promise<void> => {
-    const req: DeleteCompletedJobsRequest = {
-        type: 'deleteCompletedJobs',
-        timestamp: Date.now() / 1000,
-        workspaceId,
-        projectId,
-        scriptFileName
-    }
-    const resp = await postNeurobassRequest(req, {...auth})
-    if (resp.type !== 'deleteCompletedJobs') {
-        throw Error(`Unexpected response type ${resp.type}. Expected deleteCompletedJobs.`)
     }
 }
 

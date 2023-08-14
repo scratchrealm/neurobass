@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { deleteFile, fetchFile, fetchDataBlob, setFileContent } from "../../../dbInterface/dbInterface"
+import { deleteFile, fetchFile, fetchDataBlob, setFileText } from "../../../dbInterface/dbInterface"
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth"
 
 // this file to be deleted

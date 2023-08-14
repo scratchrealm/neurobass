@@ -29,7 +29,6 @@ const JobsTable: FunctionComponent<Props> = ({ fileName }) => {
                 <tr>
                     <th />
                     <th>Job</th>
-                    <th>File</th>
                     <th>Status</th>
                     <th>User</th>
                     <th>Created</th>
@@ -38,7 +37,7 @@ const JobsTable: FunctionComponent<Props> = ({ fileName }) => {
             </thead>
             <tbody>
                 {
-                    sortedJobs.filter(jj => (jj.scriptFileName === fileName)).map((jj) => (
+                    sortedJobs.filter(jj => (jj.processType === 'script' && jj.inputParameters.map(x => (x.value)).includes(fileName))).map((jj) => (
                         <tr key={jj.jobId}>
                             <td>{
                                 (workspaceRole === 'admin' || workspaceRole === 'editor') && (
@@ -50,7 +49,6 @@ const JobsTable: FunctionComponent<Props> = ({ fileName }) => {
                                     {jj.jobId}
                                 </Hyperlink>
                             </td>
-                            <td>{jj.scriptFileName}</td>
                             <td>{
                                 jj.status !== 'failed' ? (
                                     <span>{jj.status}</span>

@@ -7,7 +7,7 @@ import './table-x.css'
 type Props = {
     width: number
     height: number
-    onCreateFile: (fileName: string, fileContent: string) => void
+    onCreateFile: (fileName: string, o: {url: string, metadata: any}) => void
     onClose: () => void
 }
 
@@ -15,18 +15,19 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile,
     const [dandisetId, setDandisetId] = useState<string>('')
     const [dandisetVersion, setDandisetVersion] = useState<string>('')
     const [dandiAssetId, setDandiAssetId] = useState<string>('')
+    const [dandiAssetPath, setDandiAssetPath] = useState<string>('')
     const [fileName, setFileName] = useState<string>('file.nwb')
     const [nwbUrl, setNwbUrl] = useState<string>('')
     const handleSubmit = useCallback(() => {
-        const a = {
-            url: nwbUrl,
+        const metadata = {
             dandisetId: dandisetId || undefined,
             dandisetVersion: dandisetVersion || undefined,
-            dandiAssetId: dandiAssetId || undefined
+            dandiAssetId: dandiAssetId || undefined,
+            dandiAssetPath: dandiAssetPath || undefined
         }
-        onCreateFile(fileName, JSON.stringify(a, null, 2))
+        onCreateFile(fileName, {url: nwbUrl, metadata})
         setTimeout(() => {setMode('dandi')}, 2000) // go back to the default mode
-    }, [nwbUrl, fileName, onCreateFile, dandisetId, dandiAssetId, dandisetVersion])
+    }, [nwbUrl, fileName, onCreateFile, dandisetId, dandiAssetId, dandisetVersion, dandiAssetPath])
 
     const submitEnabled = useMemo(() => {
         if (!fileName) return false
@@ -43,6 +44,7 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile,
         setDandisetId(dandisetId)
         setDandisetVersion(dandisetVersion)
         setDandiAssetId(assetId)
+        setDandiAssetPath(assetPath)
         setFileName(assetPath)
         setMode('manual')
     }, [])
@@ -94,6 +96,12 @@ const ImportNwbWindow: FunctionComponent<Props> = ({width, height, onCreateFile,
                                     <td>DANDI asset ID (optional):</td>
                                     <td>
                                         <input type="text" style={{width: 500}} value={dandiAssetId} onChange={e => setDandiAssetId(e.target.value)} />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>DANDI asset path (optional):</td>
+                                    <td>
+                                        <input type="text" style={{width: 500}} value={dandiAssetPath} onChange={e => setDandiAssetPath(e.target.value)} />
                                     </td>
                                 </tr>
                                 <tr>

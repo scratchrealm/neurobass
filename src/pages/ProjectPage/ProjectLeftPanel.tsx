@@ -5,7 +5,7 @@ import Hyperlink from "../../components/Hyperlink";
 import ModalWindow from "../../components/ModalWindow/ModalWindow";
 import SmallIconButton from "../../components/SmallIconButton";
 import { alert, confirm, prompt } from "../../confirm_prompt_alert";
-import { setFileContent } from "../../dbInterface/dbInterface";
+import { setFileText } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
@@ -41,7 +41,7 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
     const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
 
     const handleCreateFile = useCallback(async (fileName: string, fileContent: string) => {
-        await setFileContent(workspaceId, projectId, fileName, fileContent, auth)
+        await setFileText(workspaceId, projectId, fileName, fileContent, auth)
         closeNewFileWindow()
         closeNewAnalysisWindow()
         refreshFiles()

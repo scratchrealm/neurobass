@@ -1,6 +1,6 @@
 import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import HBoxLayout from "../../components/HBoxLayout";
-import { setFileContent } from "../../dbInterface/dbInterface";
+import { setFileText, setUrlFile } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import { SetupWorkspacePage } from "../WorkspacePage/WorkspacePageContext";
 import ImportNwbWindow from "./ImportNwbWindow/ImportNwbWindow";
@@ -40,8 +40,8 @@ const WorkspacePageChild: FunctionComponent<Props> = ({width, height}) => {
     const {accessToken, userId} = useGithubAuth()
     const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
 
-    const handleCreateFile = useCallback(async (fileName: string, fileContent: string) => {
-        await setFileContent(workspaceId, projectId, fileName, fileContent, auth)
+    const handleCreateFile = useCallback(async (fileName: string, o: {url: string, metadata: any}) => {
+        await setUrlFile(workspaceId, projectId, fileName, o.url, o.metadata, auth)
         openTab(`file:${fileName}`)
         setView('project')
     }, [workspaceId, projectId, openTab, auth])

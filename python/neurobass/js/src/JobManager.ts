@@ -115,7 +115,7 @@ export class RunningJob {
     constructor(public job: NBJob) {
     }
     async initiate(): Promise<boolean> {
-        console.info(`Initiating job: ${this.job.jobId} - ${this.job.scriptFileName}`)
+        console.info(`Initiating job: ${this.job.jobId} - ${this.job.processType}`)
         const okay = await this._setJobProperty('status', 'running')
         if (!okay) {
             console.warn('Unable to set job status to running')
@@ -190,7 +190,16 @@ export class RunningJob {
             console.warn(resp)
             throw Error('Unexpected response type. Expected getFile')
         }
-        return await this._loadDataBlob(resp.file.contentSha1)
+        const cc = resp.file.content
+        if (cc.startsWith('data:')) {
+            return cc.slice('data:'.length)
+        }
+        else if (cc.startsWith('blob:')) {
+            return await this._loadDataBlob(cc.slice('blob:'.length))
+        }
+        else {
+            throw Error('Unable to load file content: ' + fileName + ' ' + cc)
+        }
     }
     private async _loadDataBlob(sha1: string): Promise<string> {
         const req: GetDataBlobRequest = {
@@ -217,7 +226,9 @@ export class RunningJob {
             workspaceId: this.job.workspaceId,
             projectId: this.job.projectId,
             fileName,
-            fileContent
+            fileData: fileContent,
+            size: fileContent.length,
+            metadata: {}
         }
         const resp = await this._postNeurobassRequest(req)
         if (!resp) {
@@ -255,11 +266,15 @@ export class RunningJob {
             lastUpdateConsoleOutputTimestamp = Date.now()
             await this._setJobProperty('consoleOutput', consoleOutput)
         }
-        const timer = Date.now()
-
         try {
-            const scriptFileName = this.job.scriptFileName
-            const scriptFileContent = await this._loadFileContent(this.job.scriptFileName)
+            if (this.job.processType !== 'script') {
+                throw Error('Unexpected process type: ' + this.job.processType)
+            }
+            const scriptFileName = (this.job.inputParameters.find(p => (p.name === 'script_file')) || {}).value
+            if (!scriptFileName) {
+                throw Error('Missing script_file parameter')
+            }
+            const scriptFileContent = await this._loadFileContent(scriptFileName)
             const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.job.jobId)
             fs.mkdirSync(jobDir, {recursive: true})
             fs.writeFileSync(path.join(jobDir, scriptFileName), scriptFileContent)
@@ -467,7 +482,7 @@ export class RunningJob {
 
                 const timeoutId = setTimeout(() => {
                     if (returned) return
-                    console.info(`Killing job: ${this.job.jobId} - ${this.job.scriptFileName} due to timeout`)
+                    console.info(`Killing job: ${this.job.jobId} - ${scriptFileName} due to timeout`)
                     returned = true
                     this.#childProcess.kill()
                     reject(Error('Timeout'))
@@ -530,9 +545,6 @@ export class RunningJob {
                     await this._setJobProperty('status', 'failed')
                     this.#status = 'failed'
 
-                    const elapsedSec = (Date.now() - timer) / 1000
-                    await this._setJobProperty('elapsedTimeSec', elapsedSec)
-
                     this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
                     return
                 }
@@ -546,9 +558,6 @@ export class RunningJob {
             await this._setJobProperty('status', 'completed')
             this.#status = 'completed'
 
-            const elapsedSec = (Date.now() - timer) / 1000
-            await this._setJobProperty('elapsedTimeSec', elapsedSec)
-
             this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
         }
         catch (err) {
@@ -556,9 +565,6 @@ export class RunningJob {
             await this._setJobProperty('error', err.message)
             await this._setJobProperty('status', 'failed')
             this.#status = 'failed'
-
-            const elapsedSec = (Date.now() - timer) / 1000
-            await this._setJobProperty('elapsedTimeSec', elapsedSec)
 
             this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
             return

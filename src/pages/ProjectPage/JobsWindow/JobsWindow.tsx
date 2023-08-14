@@ -15,7 +15,7 @@ const queryParams = parseQuery(window.location.href)
 
 const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
     const {workspaceRole} = useWorkspace()
-    const {refreshJobs, createJob, deleteCompletedJobs, jobs, openTabs} = useProject()
+    const {refreshJobs, createJob, jobs, openTabs} = useProject()
 
     const handleCreateJob = useCallback(async () => {
         createJob({scriptFileName: fileName})
@@ -38,8 +38,8 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
             setCreateJobTitle('File has unsaved changes')
             return false
         }
-        const pendingJob = jobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'pending'))
-        const runningJob = jobs.find(jj => (jj.scriptFileName === fileName && jj.status === 'running'))
+        const pendingJob = jobs.find(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName)) && jj.status === 'pending'))
+        const runningJob = jobs.find(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName)) && jj.status === 'running'))
         if ((pendingJob) || (runningJob)) {
             if (!(queryParams['test'] === '1')) {
                 setCreateJobTitle('A job is already pending or running for this script.')
@@ -55,12 +55,6 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
         }
         return false
     }, [workspaceRole, jobs, fileName, openTabs])
-
-    const handleDeleteCompletedJobs = useCallback(async () => {
-        const okay = await confirm('Delete all completed or failed jobs?')
-        if (!okay) return
-        deleteCompletedJobs({scriptFileName: fileName})
-    }, [deleteCompletedJobs, fileName])
 
     const iconFontSize = 20
 
@@ -82,15 +76,7 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
                     title="Refresh jobs"
                     label="Refresh"
                     fontSize={iconFontSize}
-                />
-                &nbsp;&nbsp;&nbsp;&nbsp;
-                <SmallIconButton
-                    icon={<Delete />}
-                    onClick={handleDeleteCompletedJobs}
-                    title="Delete completed or failed jobs"
-                    label="Delete completed jobs"
-                    fontSize={iconFontSize}
-                />
+                />                
             </div>
             <JobsTable
                 fileName={fileName}

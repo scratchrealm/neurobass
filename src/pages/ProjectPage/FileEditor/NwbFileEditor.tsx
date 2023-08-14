@@ -1,15 +1,14 @@
 import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
 import Hyperlink from "../../../components/Hyperlink";
+import { fetchFile } from "../../../dbInterface/dbInterface";
+import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
+import { NBFile } from "../../../types/neurobass-types";
 import { AssetResponse } from "../ImportNwbWindow/DandiNwbSelector/types";
+import { useProject } from "../ProjectPageContext";
 
 
 type Props = {
     fileName: string
-    fileContent: string
-    onSaveContent: (text: string) => void
-    editedFileContent: string
-    setEditedFileContent: (text: string) => void
-    readOnly: boolean
     width: number
     height: number
 }
@@ -19,24 +18,37 @@ type NwbLink = {
     dandisetId?: string
     dandisetVersion?: string
     dandiAssetId?: string
+    dandiAssetPath?: string
 }
 
-const NwbFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveContent, editedFileContent, setEditedFileContent, readOnly, width, height}) => {
+const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
     const [assetResponse, setAssetResponse] = useState<AssetResponse | null>(null)
 
-    const content = useMemo(() => {
-        try {
-            return JSON.parse(fileContent) as NwbLink
-        }
-        catch {
-            return null
-        }
-    }, [fileContent])
+    const {projectId} = useProject()
 
-    const nwbUrl = content?.url || ''
-    const dandisetId = content?.dandisetId || ''
-    const dandisetVersion = content?.dandisetVersion || ''
-    const dandiAssetId = content?.dandiAssetId || ''
+    const {accessToken, userId} = useGithubAuth()
+    const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
+
+    const [nbFile, setNBFile] = useState<NBFile | undefined>(undefined)
+    useEffect(() => {
+        let canceled = false
+        ; (async () => {
+            const f = await fetchFile(projectId, fileName, auth)
+            if (canceled) return
+            setNBFile(f)
+        })()
+        return () => {canceled = true}
+    }, [projectId, fileName, auth])
+
+    const metadata = nbFile?.metadata
+    const cc = nbFile?.content || ''
+    const nwbUrl = cc.startsWith('url:') ? cc.slice('url:'.length) : ''
+
+
+    const dandisetId = metadata?.dandisetId || ''
+    const dandisetVersion = metadata?.dandisetVersion || ''
+    const dandiAssetId = metadata?.dandiAssetId || ''
+    const dandiAssetPath = metadata?.dandiAssetPath || ''
 
     const handleOpenInNeurosift = useCallback(() => {
         const u = `https://flatironinstitute.github.io/neurosift/?p=/nwb&url=${nwbUrl}`
@@ -55,6 +67,10 @@ const NwbFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveC
             }
         })()
     }, [dandisetId, dandiAssetId, dandisetVersion])
+
+    if ((assetResponse) && (dandiAssetPath !== assetResponse.path)) {
+        console.warn(`Mismatch between dandiAssetPath (${dandiAssetPath}) and assetResponse.path (${assetResponse.path})`)
+    }
 
     return (
         <div style={{position: 'absolute', width, height, background: 'white'}}>

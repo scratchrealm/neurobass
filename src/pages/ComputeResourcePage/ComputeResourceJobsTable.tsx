@@ -47,7 +47,6 @@ const ComputeResourceJobsTable: FunctionComponent<Props> = ({ computeResourceId 
                     <th>Job</th>
                     <th>Workspace</th>
                     <th>Project</th>
-                    <th>File</th>
                     <th>Status</th>
                     <th>User</th>
                     <th>Created</th>
@@ -72,7 +71,6 @@ const ComputeResourceJobsTable: FunctionComponent<Props> = ({ computeResourceId 
                             <td>
                                 <Hyperlink onClick={() => setRoute({page: 'project', projectId: jj.projectId})}>{jj.projectId}</Hyperlink>
                             </td>
-                            <td>{jj.scriptFileName}</td>
                             <td>{
                                 jj.status !== 'failed' ? (
                                     <span>{jj.status}</span>

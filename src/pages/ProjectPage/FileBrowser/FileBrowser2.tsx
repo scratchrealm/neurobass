@@ -24,21 +24,21 @@ type FileItem = {
     name: string
     selected: boolean
     size: number
-    timestampModified: number
+    timestampCreated: number
 }
 
 const FileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, files, hideSizeColumn}) => {
     const {currentTabName} = useProject()
 
-    const files = useMemo(() => {
+    const fileItems = useMemo(() => {
         const ret: FileItem[] = []
         for (const x of files || []) {
             ret.push({
                 id: x.fileName,
                 name: x.fileName,
                 selected: 'file:' + x.fileName === currentTabName,
-                size: x.contentSize,
-                timestampModified: x.timestampModified
+                size: x.size,
+                timestampCreated: x.timestampCreated
             })
         }
         ret.sort((a, b) => {
@@ -93,11 +93,11 @@ const FileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDup
                 </thead>
                 <tbody>
                     {
-                        files.map(x => (
+                        fileItems.map(x => (
                             <tr key={x.id} onClick={() => handleClickFile(x.id)} onContextMenu={(evt) => handleContextMenu(evt, x.id)} style={{cursor: 'pointer'}}>
                                 <td><FileIcon fileName={x.name} /></td>
                                 <td>{x.name}</td>
-                                <td><span style={{whiteSpace: 'nowrap'}}>{timeAgoString(x.timestampModified)}</span></td>
+                                <td><span style={{whiteSpace: 'nowrap'}}>{timeAgoString(x.timestampCreated)}</span></td>
                                 {!hideSizeColumn && <td>{formatByteCount(x.size)}</td>}
                             </tr>
                         ))

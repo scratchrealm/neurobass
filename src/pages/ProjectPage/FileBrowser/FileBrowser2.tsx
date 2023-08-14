@@ -130,9 +130,6 @@ export const FileIcon: FunctionComponent<{fileName: string}> = ({fileName}) => {
         // return <FontAwesomeIcon icon={faFile as any} style={{color: 'darkorange'}} />
         return <img src="/neurobass-logo.png" alt="logo" height={14} style={{paddingBottom: 0, cursor: 'pointer'}} />
     }
-    else if (ext === 'nba') {
-        return <FontAwesomeIcon icon={faFile as any} style={{color: 'darkorange'}} />
-    }
     else if (ext === 'nwb') {
         return <FontAwesomeIcon icon={faFile as any} style={{color: 'red'}} />
     }

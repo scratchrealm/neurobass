@@ -1,8 +1,6 @@
 import { FunctionComponent } from "react";
 import Splitter from "../../../components/Splitter";
 import JobsWindow from "../JobsWindow/JobsWindow";
-import { useProject } from "../ProjectPageContext";
-import NbaFileEditor from "./NbaFileEditor";
 import TextEditor from "./TextEditor";
 
 type Props = {
@@ -18,8 +16,6 @@ type Props = {
 
 const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveContent, editedFileContent, setEditedFileContent, readOnly, width, height}) => {
     const fileType = fileName.split('.').pop()
-    const {files} = useProject()
-    const outputFileName = fileType === 'nba' ? files?.find(f => (f.fileName === `${fileName}.out`))?.fileName : undefined
     return (
         <Splitter
             width={width}
@@ -28,32 +24,20 @@ const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSa
             direction="vertical"
         >
             {
-                fileType === 'py' ? (
-                    <TextEditor
-                        width={0}
-                        height={0}
-                        language={
-                            fileType === 'py' ? 'python' :
-                            fileType === 'nba' ? 'yaml' :
-                            'text'
-                        }
-                        label={fileName}
-                        text={fileContent}
-                        onSaveText={onSaveContent}
-                        editedText={editedFileContent}
-                        onSetEditedText={setEditedFileContent}
-                        readOnly={readOnly}
-                    />
-                ) : (
-                    <NbaFileEditor
-                        width={0}
-                        height={0}
-                        text={fileContent}
-                        onSetText={txt => {onSaveContent(txt); setEditedFileContent(txt)}}
-                        readOnly={readOnly}
-                        outputFileName={outputFileName}
-                    />
-                )
+                <TextEditor
+                    width={0}
+                    height={0}
+                    language={
+                        fileType === 'py' ? 'python' :
+                        'text'
+                    }
+                    label={fileName}
+                    text={fileContent}
+                    onSaveText={onSaveContent}
+                    editedText={editedFileContent}
+                    onSetEditedText={setEditedFileContent}
+                    readOnly={readOnly}
+                />
             }
             <JobsWindow
                 width={0}

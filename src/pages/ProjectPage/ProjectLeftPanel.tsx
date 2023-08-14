@@ -1,18 +1,16 @@
-import { ContentCopy, Download, Edit, NoteAdd, PlayArrow, Refresh, Settings } from "@mui/icons-material";
-import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Edit, NoteAdd, Refresh, Settings } from "@mui/icons-material";
+import { FunctionComponent, useCallback, useMemo } from "react";
 import { useModalDialog } from "../../ApplicationBar";
 import Hyperlink from "../../components/Hyperlink";
 import ModalWindow from "../../components/ModalWindow/ModalWindow";
 import SmallIconButton from "../../components/SmallIconButton";
-import { alert, confirm, prompt } from "../../confirm_prompt_alert";
+import { prompt } from "../../confirm_prompt_alert";
 import { setFileText } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
-import NewAnalysisWindow from "./NewAnalysisWindow/NewAnalysisWindow";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
-import FileBrowser2 from "./FileBrowser/FileBrowser2";
 import { useProject } from "./ProjectPageContext";
 import ProjectSettingsWindow from "./ProjectSettingsWindow";
 
@@ -23,10 +21,9 @@ type Props = {
 }
 
 const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}) => {
-    const {projectId, project, workspaceId, openTab, files, setProjectProperty, refreshFiles} = useProject()
+    const {projectId, project, workspaceId, openTab, setProjectProperty, refreshFiles} = useProject()
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
-    const {visible: newAnalysisWindowVisible, handleOpen: openNewAnalysisWindow, handleClose: closeNewAnalysisWindow} = useModalDialog()
     const {workspace, workspaceRole} = useWorkspace()
     const {setRoute} = useRoute()
 
@@ -43,10 +40,9 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
     const handleCreateFile = useCallback(async (fileName: string, fileContent: string) => {
         await setFileText(workspaceId, projectId, fileName, fileContent, auth)
         closeNewFileWindow()
-        closeNewAnalysisWindow()
         refreshFiles()
         openTab(`file:${fileName}`)
-    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow, closeNewAnalysisWindow])
+    }, [workspaceId, projectId, auth, refreshFiles, openTab, closeNewFileWindow])
 
     const padding = 10
     const W = width - 2 * padding
@@ -84,8 +80,6 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
             <div style={{paddingBottom: 5}}>
                 <SmallIconButton onClick={onImportNwb} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
                 <br />
-                <SmallIconButton onClick={openNewAnalysisWindow} title="Create a new analysis" icon={<PlayArrow />} label="Create analysis" fontSize={24} />
-                <br />
                 <SmallIconButton onClick={openNewFileWindow} title="Create a new file" icon={<NoteAdd />} label="Create file" fontSize={24} />
                 &nbsp;&nbsp;
                 <SmallIconButton onClick={refreshFiles} title="Refresh files" icon={<Refresh />} fontSize={24} />
@@ -112,14 +106,6 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
                 onClose={closeNewFileWindow}
             >
                 <NewFileWindow
-                    onCreateFile={handleCreateFile}
-                />
-            </ModalWindow>
-            <ModalWindow
-                open={newAnalysisWindowVisible}
-                onClose={closeNewAnalysisWindow}
-            >
-                <NewAnalysisWindow
                     onCreateFile={handleCreateFile}
                 />
             </ModalWindow>

@@ -2,7 +2,6 @@ import { FunctionComponent, useCallback, useEffect, useMemo, useState } from "re
 import ComputeResourceIdComponent from "../../../ComputeResourceIdComponent";
 import { fetchJob } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
-import { GetJobRequest } from "../../../types/NeurobassRequest";
 import { NBJob } from "../../../types/neurobass-types";
 import UserIdComponent from "../../../UserIdComponent";
 import { useProject } from "../ProjectPageContext";
@@ -61,8 +60,8 @@ const JobView: FunctionComponent<Props> = ({ width, height, jobId }) => {
                         <td><UserIdComponent userId={job.userId} /></td>
                     </tr>
                     <tr>
-                        <td>Script file name:</td>
-                        <td>{job.scriptFileName}</td>
+                        <td>Process type:</td>
+                        <td>{job.processType}</td>
                     </tr>
                     <tr>
                         <td>Compute resource:</td>
@@ -82,7 +81,7 @@ const JobView: FunctionComponent<Props> = ({ width, height, jobId }) => {
                     </tr>
                     <tr>
                         <td>Elapsed time (sec)</td>
-                        <td>{job.elapsedTimeSec}</td>
+                        <td>{(job.status === 'completed' || job.status === 'failed') ? (job.timestampFinished || 0) - (job.timestampRunning || 0) : ''}</td>
                     </tr>
                 </tbody>
             </table>

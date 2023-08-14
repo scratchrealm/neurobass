@@ -2,7 +2,6 @@ import { FunctionComponent, useCallback, useEffect, useMemo } from "react";
 import { fetchFile, fetchFileText, setFileText } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
 import { useProject } from "../ProjectPageContext";
-import NbaOutputFileEditor from "./NbaOutputFileEditor/NbaOutputFileEditor";
 import NwbFileEditor from "./NwbFileEditor";
 import ScriptFileEditor from "./ScriptFileEditor";
 import StanFileEditor from "./StanFileEditor";
@@ -79,7 +78,7 @@ const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, 
             />
         )
     }
-    else if (fileName.endsWith('.py') || fileName.endsWith('.nba')) {
+    else if (fileName.endsWith('.py')) {
         return (
             <ScriptFileEditor
                 fileName={fileName}
@@ -97,16 +96,6 @@ const FileEditor: FunctionComponent<Props> = ({fileName, readOnly, fileContent, 
         return (
             <NwbFileEditor
                 fileName={fileName}
-                width={width}
-                height={height}
-            />
-        )
-    }
-    else if (fileName.endsWith('.nba.out')) {
-        return (
-            <NbaOutputFileEditor
-                fileName={fileName}
-                fileContent={fileContent || ''}
                 width={width}
                 height={height}
             />

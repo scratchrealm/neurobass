@@ -583,8 +583,8 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
     }
 }
 
-const loadOutputJson = async (outputDir: string): Promise<SortingOutput> => {
-    const output = await fs.promises.readFile(path.join(outputDir, 'out.json'), {encoding: 'utf8'})
+const loadOutputJson = async (jobDir: string): Promise<SortingOutput> => {
+    const output = await fs.promises.readFile(path.join(jobDir, 'output', 'out.json'), {encoding: 'utf8'})
     return JSON.parse(output)
 }
 

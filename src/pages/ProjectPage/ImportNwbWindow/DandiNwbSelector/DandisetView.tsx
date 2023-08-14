@@ -107,8 +107,8 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
             </div>
             <div style={{fontSize: 14, padding: 5}}>
                 {
-                    X.metadata.contributor.map(c => (
-                        <span key={c.name}>{c.name}; </span>
+                    X.metadata.contributor.map((c, i) => (
+                        <span key={i}>{c.name}; </span>
                     ))
                 }
             </div>

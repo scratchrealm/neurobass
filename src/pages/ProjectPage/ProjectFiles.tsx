@@ -7,7 +7,7 @@ import FileEditor from "./FileEditor/FileEditor";
 import { useProject } from "./ProjectPageContext";
 import JobView from "./JobView/JobView";
 
-const ProjectMainPanel: FunctionComponent<{width: number, height: number}> = ({width, height}) => {
+const ProjectFiles: FunctionComponent<{width: number, height: number}> = ({width, height}) => {
     const {files, openTab, deleteFile, closeTab, duplicateFile, renameFile, openTabs} = useProject()
 
     const handleOpenFile = useCallback((fileName: string) => {
@@ -161,4 +161,4 @@ const iconFromTabName = (tabName: string) => {
     else return undefined
 }
 
-export default ProjectMainPanel
+export default ProjectFiles

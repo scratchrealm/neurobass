@@ -39,10 +39,10 @@ const DandiNwbSelector: FunctionComponent<Props> = ({width, height, onNwbFileSel
             if (!nwbUrl) return
             onNwbFileSelected(nwbUrl, dandisetId, dandisetVersion, assetItem.asset_id, assetItem.path)
         }
-    }, [])
+    }, [onNwbFileSelected])
 
     return (
-        <div style={{position: 'absolute', width, height}}>
+        <div style={{position: 'absolute', width, height, background: 'white'}}>
             <div style={{position: 'absolute', width, height: searchBarHeight, overflow: 'hidden', background: 'white'}}>
                 <SearchBar
                     width={width}

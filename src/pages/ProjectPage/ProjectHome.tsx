@@ -7,20 +7,66 @@ import SmallIconButton from "../../components/SmallIconButton";
 import { prompt } from "../../confirm_prompt_alert";
 import { setFileText } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
+import { timeAgoString } from "../../timeStrings";
 import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
+import { ProjectPageViewType } from "./ProjectPage";
 import { useProject } from "./ProjectPageContext";
 import ProjectSettingsWindow from "./ProjectSettingsWindow";
 
 type Props = {
     width: number
     height: number
-    onImportNwb: () => void
+    setCurrentView: (view: ProjectPageViewType) => void
 }
 
-const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}) => {
+const ProjectHome: FunctionComponent<Props> = ({width, height, setCurrentView}) => {
+    const {setRoute} = useRoute()
+    const {project, files, jobs, workspaceId} = useProject()
+    const {workspace} = useWorkspace()
+    return (
+        <div style={{position: 'absolute', width, height, overflow: 'hidden', padding: 10, background: 'white'}}>
+            <div style={{fontSize: 20, fontWeight: 'bold'}}>Project: {project?.name}</div>
+            &nbsp;
+            <table className="table1" style={{maxWidth: 500}}>
+                <tbody>
+                    <tr>
+                        <td>Project name:</td>
+                        <td>{project?.name}</td>
+                    </tr>
+                    <tr>
+                        <td>Project ID:</td>
+                        <td>{project?.projectId}</td>
+                    </tr>
+                    <tr>
+                        <td>Workspace:</td>
+                        <td><Hyperlink onClick={() => setRoute({page: 'workspace', workspaceId})}>{workspace?.name}</Hyperlink></td>
+                    </tr>
+                    <tr>
+                        <td>Created:</td>
+                        <td>{timeAgoString(project?.timestampCreated)}</td>
+                    </tr>
+                    <tr>
+                        <td>Modified:</td>
+                        <td>{timeAgoString(project?.timestampModified)}</td>
+                    </tr>
+                    <tr>
+                        <td>Num. files:</td>
+                        <td>{files?.length} (<Hyperlink onClick={() => setCurrentView('project-files')}>view files</Hyperlink>)</td>
+                    </tr>
+                    <tr>
+                        <td>Num. jobs:</td>
+                        <td>{jobs?.length} (<Hyperlink onClick={() => setCurrentView('project-jobs')}>view jobs</Hyperlink>)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    )
+}
+
+const ProjectHomeOld: FunctionComponent<Props> = ({width, height}) => {
     const {projectId, project, workspaceId, openTab, setProjectProperty, refreshFiles} = useProject()
     const {visible: settingsWindowVisible, handleOpen: openSettingsWindow, handleClose: closeSettingsWindow} = useModalDialog()
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
@@ -78,8 +124,8 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
             <hr />
 
             <div style={{paddingBottom: 5}}>
-                <SmallIconButton onClick={onImportNwb} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
-                <br />
+                {/* <SmallIconButton onClick={onImportNwb} title="Import NWB file" icon={<Download />} label="Import NWB" fontSize={24} />
+                <br /> */}
                 <SmallIconButton onClick={openNewFileWindow} title="Create a new file" icon={<NoteAdd />} label="Create file" fontSize={24} />
                 &nbsp;&nbsp;
                 <SmallIconButton onClick={refreshFiles} title="Refresh files" icon={<Refresh />} fontSize={24} />
@@ -113,4 +159,4 @@ const ProjectLeftPanel: FunctionComponent<Props> = ({width, height, onImportNwb}
     )
 }
 
-export default ProjectLeftPanel
+export default ProjectHome

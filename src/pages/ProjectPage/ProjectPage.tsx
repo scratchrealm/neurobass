@@ -1,7 +1,8 @@
-import { FunctionComponent, useCallback, useMemo, useState } from "react";
+import { FunctionComponent, useCallback, useMemo } from "react";
 import HBoxLayout from "../../components/HBoxLayout";
 import { setUrlFile } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
+import useRoute from "../../useRoute";
 import { SetupWorkspacePage } from "../WorkspacePage/WorkspacePageContext";
 import DandiNwbSelector from "./ImportNwbWindow/DandiNwbSelector/DandiNwbSelector";
 import ProjectFiles from "./ProjectFiles";
@@ -61,7 +62,6 @@ const projectPageViews: ProjectPageView[] = [
 
 const ProjectPageChild: FunctionComponent<Props> = ({width, height}) => {
     const {workspaceId} = useProject()
-    const [currentView, setCurrentView] = useState<ProjectPageViewType>('project-home')
 
     const leftMenuPanelWidth = 150
     return (
@@ -76,14 +76,10 @@ const ProjectPageChild: FunctionComponent<Props> = ({width, height}) => {
                     <LeftMenuPanel
                         width={0}
                         height={0}
-                        currentView={currentView}
-                        setCurrentView={setCurrentView}
                     />
                     <MainPanel
                         width={0}
                         height={0}
-                        currentView={currentView}
-                        setCurrentView={setCurrentView}
                     />
                 </HBoxLayout>
             </div>
@@ -94,11 +90,13 @@ const ProjectPageChild: FunctionComponent<Props> = ({width, height}) => {
 type LeftMenuPanelProps = {
     width: number
     height: number
-    currentView: ProjectPageViewType
-    setCurrentView: (view: ProjectPageViewType) => void
 }
 
-const LeftMenuPanel: FunctionComponent<LeftMenuPanelProps> = ({width, height, currentView, setCurrentView}) => {
+const LeftMenuPanel: FunctionComponent<LeftMenuPanelProps> = ({width, height}) => {
+    const {route, setRoute} = useRoute()
+    const {projectId} = useProject()
+    if (route.page !== 'project') throw Error(`Unexpected route ${JSON.stringify(route)}`)
+    const currentView = route.tab || 'project-home'
     return (
         <div style={{position: 'absolute', width, height, overflow: 'hidden', background: '#fafafa'}}>
             {
@@ -106,7 +104,7 @@ const LeftMenuPanel: FunctionComponent<LeftMenuPanelProps> = ({width, height, cu
                     <div
                         key={view.type}
                         style={{padding: 10, cursor: 'pointer', background: currentView === view.type ? '#ddd' : 'white'}}
-                        onClick={() => setCurrentView(view.type)}
+                        onClick={() => setRoute({page: 'project', projectId, tab: view.type})}
                     >
                         {view.label}
                     </div>
@@ -119,14 +117,15 @@ const LeftMenuPanel: FunctionComponent<LeftMenuPanelProps> = ({width, height, cu
 type MainPanelProps = {
     width: number
     height: number
-    currentView: ProjectPageViewType
-    setCurrentView: (view: ProjectPageViewType) => void
 }
 
-const MainPanel: FunctionComponent<MainPanelProps> = ({width, height, currentView, setCurrentView}) => {
+const MainPanel: FunctionComponent<MainPanelProps> = ({width, height}) => {
     const {openTab, project, refreshFiles} = useProject()
     const {accessToken, userId} = useGithubAuth()
     const auth = useMemo(() => (accessToken ? {githubAccessToken: accessToken, userId} : {}), [accessToken, userId])
+    const {route, setRoute} = useRoute()
+    if (route.page !== 'project') throw Error(`Unexpected route ${JSON.stringify(route)}`)
+    const currentView = route.tab || 'project-home'
 
     const handleCreateFile = useCallback(async (fileName: string, o: {url: string, metadata: any}) => {
         if (!project) {
@@ -136,8 +135,8 @@ const MainPanel: FunctionComponent<MainPanelProps> = ({width, height, currentVie
         await setUrlFile(project.workspaceId, project.projectId, fileName, o.url, o.metadata, auth)
         refreshFiles()
         openTab(`file:${fileName}`)
-        setCurrentView('project-files')
-    }, [project, openTab, setCurrentView, auth, refreshFiles])
+        setRoute({page: 'project', projectId: project.projectId, tab: 'project-files'})
+    }, [project, openTab, auth, refreshFiles, setRoute])
 
     const handleImportNwbFile = useCallback((nwbUrl: string, dandisetId: string, dandisetVersion: string, assetId: string, assetPath: string) => {
         const metadata = {
@@ -155,7 +154,6 @@ const MainPanel: FunctionComponent<MainPanelProps> = ({width, height, currentVie
                 <ProjectHome
                     width={width}
                     height={height}
-                    setCurrentView={setCurrentView}
                 />
             </div>
             <div style={{position: 'absolute', width, height, visibility: currentView === 'project-files' ? undefined : 'hidden'}}>

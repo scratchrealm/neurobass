@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { ProjectPageViewType } from "./pages/ProjectPage/ProjectPage"
 
 export type Route = {
     page: 'home'
@@ -8,6 +9,7 @@ export type Route = {
 } | {
     page: 'project'
     projectId: string
+    tab?: ProjectPageViewType
 } | {
     page: 'workspace'
     workspaceId: string
@@ -28,6 +30,8 @@ const useRoute = () => {
     const location = useLocation()
     const navigate = useNavigate()
     const p = location.pathname
+    const search = location.search
+    const searchParams = useMemo(() => new URLSearchParams(search), [search])
     const route: Route = useMemo(() => {
         if (p === '/about') {
             return {
@@ -37,9 +41,11 @@ const useRoute = () => {
         else if (p.startsWith('/project/')) {
             const a = p.split('/')
             const projectId = a[2]
+            const tab = (searchParams.get('tab') || undefined) as ProjectPageViewType | undefined
             return {
                 page: 'project',
-                projectId
+                projectId,
+                tab
             }
         }
         else if (p.startsWith('/workspace/')) {
@@ -83,7 +89,7 @@ const useRoute = () => {
                 page: 'home'
             }
         }
-    }, [p])
+    }, [p, searchParams])
 
     const setRoute = useCallback((r: Route) => {
         if (r.page === 'home') {
@@ -93,7 +99,11 @@ const useRoute = () => {
             navigate('/about')
         }
         else if (r.page === 'project') {
-            navigate(`/project/${r.projectId}`)
+            let u = `/project/${r.projectId}`
+            if (r.tab) {
+                u += `?tab=${r.tab}`
+            }
+            navigate(u)
         }
         else if (r.page === 'workspace') {
             navigate(`/workspace/${r.workspaceId}`)

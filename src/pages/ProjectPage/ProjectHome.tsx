@@ -1,4 +1,4 @@
-import { Download, Edit, NoteAdd, Refresh, Settings } from "@mui/icons-material";
+import { Edit, NoteAdd, Refresh, Settings } from "@mui/icons-material";
 import { FunctionComponent, useCallback, useMemo } from "react";
 import { useModalDialog } from "../../ApplicationBar";
 import Hyperlink from "../../components/Hyperlink";
@@ -12,19 +12,17 @@ import useRoute from "../../useRoute";
 import { useWorkspace } from "../WorkspacePage/WorkspacePageContext";
 import BackButton from "./BackButton";
 import NewFileWindow from "./NewFileWindow/NewFileWindow";
-import { ProjectPageViewType } from "./ProjectPage";
 import { useProject } from "./ProjectPageContext";
 import ProjectSettingsWindow from "./ProjectSettingsWindow";
 
 type Props = {
     width: number
     height: number
-    setCurrentView: (view: ProjectPageViewType) => void
 }
 
-const ProjectHome: FunctionComponent<Props> = ({width, height, setCurrentView}) => {
+const ProjectHome: FunctionComponent<Props> = ({width, height}) => {
     const {setRoute} = useRoute()
-    const {project, files, jobs, workspaceId} = useProject()
+    const {project, files, jobs, workspaceId, projectId} = useProject()
     const {workspace} = useWorkspace()
     return (
         <div style={{position: 'absolute', width, height, overflow: 'hidden', padding: 10, background: 'white'}}>
@@ -54,11 +52,11 @@ const ProjectHome: FunctionComponent<Props> = ({width, height, setCurrentView}) 
                     </tr>
                     <tr>
                         <td>Num. files:</td>
-                        <td>{files?.length} (<Hyperlink onClick={() => setCurrentView('project-files')}>view files</Hyperlink>)</td>
+                        <td>{files?.length} (<Hyperlink onClick={() => setRoute({page: 'project', projectId, tab: 'project-files'})}>view files</Hyperlink>)</td>
                     </tr>
                     <tr>
                         <td>Num. jobs:</td>
-                        <td>{jobs?.length} (<Hyperlink onClick={() => setCurrentView('project-jobs')}>view jobs</Hyperlink>)</td>
+                        <td>{jobs?.length} (<Hyperlink onClick={() => setRoute({page: 'project', projectId, tab: 'project-jobs'})}>view jobs</Hyperlink>)</td>
                     </tr>
                 </tbody>
             </table>

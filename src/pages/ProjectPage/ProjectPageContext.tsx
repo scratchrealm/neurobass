@@ -1,9 +1,8 @@
 import React, { FunctionComponent, PropsWithChildren, useCallback, useEffect, useMemo } from 'react';
-import { createJob, deleteProject, deleteJob, fetchProject, fetchFiles, fetchJobsForProject, setProjectProperty, deleteFile, duplicateFile, renameFile } from '../../dbInterface/dbInterface';
+import { createJob, deleteFile, deleteJob, deleteProject, duplicateFile, fetchFiles, fetchJobsForProject, fetchProject, renameFile, setProjectProperty } from '../../dbInterface/dbInterface';
 import { useGithubAuth } from '../../GithubAuth/useGithubAuth';
 import { onPubsubMessage } from '../../pubnub/pubnub';
-import { NBProject, NBFile, NBJob } from '../../types/neurobass-types';
-import yaml from 'js-yaml'
+import { NBFile, NBJob, NBProject } from '../../types/neurobass-types';
 
 type Props = {
     projectId: string
@@ -129,9 +128,9 @@ type ProjectPageContextType = {
     createJob: (o: {scriptFileName: string}) => void
     deleteJob: (jobId: string) => void
     refreshJobs: () => void
-    deleteFile: (fileName: string) => void
-    duplicateFile: (fileName: string, newFileName: string) => void
-    renameFile: (fileName: string, newFileName: string) => void
+    deleteFile: (fileName: string) => Promise<void>
+    duplicateFile: (fileName: string, newFileName: string) => Promise<void>
+    renameFile: (fileName: string, newFileName: string) => Promise<void>
     fileHasBeenEdited: (fileName: string) => boolean
 }
 
@@ -152,9 +151,9 @@ const ProjectPageContext = React.createContext<ProjectPageContextType>({
     createJob: () => {},
     deleteJob: () => {},
     refreshJobs: () => {},
-    deleteFile: () => {},
-    duplicateFile: () => {},
-    renameFile: () => {},
+    deleteFile: async () => {},
+    duplicateFile: async () => {},
+    renameFile: async () => {},
     fileHasBeenEdited: () => false
 })
 
@@ -279,8 +278,7 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
     const deleteFileHandler = useCallback(async (fileName: string) => {
         if (!project) return
         await deleteFile(project.workspaceId, projectId, fileName, auth)
-        refreshFiles()
-    }, [project, projectId, refreshFiles, auth])
+    }, [project, projectId, auth])
 
     const duplicateFileHandler = useCallback(async (fileName: string, newFileName: string) => {
         if (!project) return

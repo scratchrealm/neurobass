@@ -59,6 +59,9 @@ const NewFileWindow: FunctionComponent<Props> = ({onCreateFile}) => {
     return (
         <div>
             <h3>Create a new file</h3>
+            <p>
+                Note: to import data from DANDI or other sources, use one of the options in the sidebar.
+            </p>
             {
                 // radio buttons for the various options
                 options.map(({name, label}) => (

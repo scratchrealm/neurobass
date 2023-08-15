@@ -43,13 +43,15 @@ const duplicateFileHandler = async (request: DuplicateFileRequest, o: {verifiedC
         throw new Error('Project file already exists')
     }
 
-    await filesCollection.insertOne({
+    const newFile = {
         ...file,
         fileName: request.newFileName,
         fileId: createRandomId(8),
         jobId: undefined,
         timestampCreated: Date.now() / 1000
-    })
+    }
+    delete newFile.jobId // so that it doesn't get set to null
+    await filesCollection.insertOne(newFile)
     
     return {
         type: 'duplicateFile'

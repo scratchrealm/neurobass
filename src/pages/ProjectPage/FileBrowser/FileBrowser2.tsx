@@ -1,16 +1,18 @@
 import { faPython } from '@fortawesome/free-brands-svg-icons';
 import { faFile } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Delete, DriveFileRenameOutline, FileCopy } from '@mui/icons-material';
-import { FunctionComponent, useCallback, useMemo, useState } from "react";
-import SmallIconButton from '../../../components/SmallIconButton';
+import { FunctionComponent, useCallback, useMemo, useReducer } from "react";
+import Hyperlink from '../../../components/Hyperlink';
 import { timeAgoString } from '../../../timeStrings';
 import { NBFile } from '../../../types/neurobass-types';
 import { useProject } from '../ProjectPageContext';
 import './file-browser-table.css';
+import FileBrowserMenuBar from './FileBrowserMenuBar';
 import formatByteCount from './formatByteCount';
 
 type Props = {
+    width: number
+    height: number
     files: NBFile[] | undefined
     onOpenFile: (path: string) => void
     onDeleteFile: (path: string) => void
@@ -27,8 +29,39 @@ type FileItem = {
     timestampCreated: number
 }
 
-const FileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDuplicateFile, onRenameFile, files, hideSizeColumn}) => {
+type SelectedFileNames = Set<string>
+
+type SelectedFileNamesAction = {
+    type: 'toggle'
+    fileName: string
+} | {
+    type: 'set'
+    fileNames: string[]
+}
+
+const selectedFileNamesReducer = (state: SelectedFileNames, action: SelectedFileNamesAction): SelectedFileNames => {
+    if (action.type === 'toggle') {
+        const ret = new Set(state)
+        if (ret.has(action.fileName)) {
+            ret.delete(action.fileName)
+        }
+        else {
+            ret.add(action.fileName)
+        }
+        return ret
+    }
+    else if (action.type === 'set') {
+        return new Set(action.fileNames)
+    }
+    else {
+        return state
+    }
+}
+
+const FileBrowser2: FunctionComponent<Props> = ({width, height, onOpenFile, files, hideSizeColumn}) => {
     const {currentTabName} = useProject()
+
+    const [selectedFileNames, selectedFileNamesDispatch] = useReducer(selectedFileNamesReducer, new Set<string>())
 
     const fileItems = useMemo(() => {
         const ret: FileItem[] = []
@@ -53,67 +86,55 @@ const FileBrowser2: FunctionComponent<Props> = ({onOpenFile, onDeleteFile, onDup
         return ret
     }, [files, currentTabName])
 
-    const [contextMenu, setContextMenu] = useState<{visible: boolean, x: number, y: number, fileId: string}>({ visible: false, x: 0, y: 0, fileId: '' })
-
-    const handleContextMenu = (evt: React.MouseEvent, fileId: string) => {
-        evt.preventDefault()
-        const boundingRect = evt.currentTarget.parentElement?.getBoundingClientRect()
-        if (!boundingRect) return
-        setContextMenu({ visible: true, x: evt.clientX - boundingRect.x, y: evt.clientY - boundingRect.y, fileId });
-    }
-
     const handleClickFile = useCallback((fileId: string) => {
         onOpenFile(fileId)
-        setContextMenu({ visible: false, x: 0, y: 0, fileId: '' })
     }, [onOpenFile])
 
-    const handleContextMenuAction = useCallback((fileId: string, action: string) => {
-        if (action === 'delete') {
-            onDeleteFile(fileId)
-        }
-        else if (action === 'duplicate') {
-            onDuplicateFile(fileId)
-        }
-        else if (action === 'rename') {
-            onRenameFile(fileId)
-        }
-        setContextMenu({ visible: false, x: 0, y: 0, fileId: '' })
-    }, [onDeleteFile, onDuplicateFile, onRenameFile])
+    const menuBarHeight = 30
+    const hPadding = 20
+    const vPadding = 5
+
+    const colWidth = 15
     
     return (
-        <div onMouseLeave={() => {setContextMenu({visible: false, x: 0, y: 0, fileId: ''})}} style={{position: 'absolute'}}>
-            <table className="file-browser-table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th>File</th>
-                        <th>Modified</th>
-                        {!hideSizeColumn && <th>Size</th>}
-                    </tr>
-                </thead>
-                <tbody>
-                    {
-                        fileItems.map(x => (
-                            <tr key={x.id} onClick={() => handleClickFile(x.id)} onContextMenu={(evt) => handleContextMenu(evt, x.id)} style={{cursor: 'pointer'}}>
-                                <td><FileIcon fileName={x.name} /></td>
-                                <td>{x.name}</td>
-                                <td><span style={{whiteSpace: 'nowrap'}}>{timeAgoString(x.timestampCreated)}</span></td>
-                                {!hideSizeColumn && <td>{formatByteCount(x.size)}</td>}
-                            </tr>
-                        ))
-                    }
-                </tbody>
-            </table>
-            {
-                contextMenu.visible && (
-                    <ContextMenu
-                        x={contextMenu.x}
-                        y={contextMenu.y}
-                        fileId={contextMenu.fileId}
-                        onAction={handleContextMenuAction}
-                    />
-                )
-            }
+        <div style={{position: 'absolute', width, height}}>
+            <div style={{position: 'absolute', width: width - hPadding * 2, height: menuBarHeight - vPadding * 2, paddingLeft: hPadding, paddingRight: hPadding, paddingTop: vPadding, paddingBottom: vPadding}}>
+                <FileBrowserMenuBar
+                    width={width - hPadding * 2}
+                    height={menuBarHeight - vPadding * 2}
+                    selectedFileNames={Array.from(selectedFileNames)}
+                />
+            </div>
+            <div style={{position: 'absolute', width: width - hPadding * 2, height: height - menuBarHeight - vPadding * 2, top: menuBarHeight, overflowY: 'scroll', paddingLeft: hPadding, paddingRight: hPadding, paddingTop: vPadding, paddingBottom: vPadding}}>
+                <table className="file-browser-table">
+                    <thead>
+                        <tr>
+                            <th style={{width: colWidth}}></th>
+                            <th style={{width: colWidth}}></th>
+                            <th>File</th>
+                            <th>Modified</th>
+                            {!hideSizeColumn && <th>Size</th>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {
+                            fileItems.map(x => (
+                                <tr key={x.id}>
+                                    <td style={{width: colWidth}}><Checkbox checked={selectedFileNames.has(x.name)} onClick={() => selectedFileNamesDispatch({type: 'toggle', fileName: x.name})} /></td>
+                                    <td style={{width: colWidth}}><FileIcon fileName={x.name} /></td>
+                                    <td>
+                                        <Hyperlink
+                                            onClick={() => handleClickFile(x.name)}
+                                        >{x.name}</Hyperlink>
+                                    </td>
+                                    <td><span style={{whiteSpace: 'nowrap'}}>{timeAgoString(x.timestampCreated)}</span></td>
+                                    {!hideSizeColumn && <td>{formatByteCount(x.size)}</td>}
+                                </tr>
+                            ))
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     )
 }
@@ -138,30 +159,9 @@ export const FileIcon: FunctionComponent<{fileName: string}> = ({fileName}) => {
     }
 }
 
-const ContextMenu: FunctionComponent<{ x: number, y: number, fileId: string, onAction: (fileId: string, a: string) => void}> = ({x, y, fileId, onAction}) => {
-    const options = [
-        {
-            id: "delete",
-            label: <span><SmallIconButton icon={<Delete />} /> delete {fileId}</span>
-        }, {
-            id: "rename",
-            label: <span><SmallIconButton icon={<DriveFileRenameOutline />} /> rename...</span>
-        }, {
-            id: "duplicate",
-            label: <span><SmallIconButton icon={<FileCopy />} /> duplicate...</span>
-        }
-    ]
-  
-    const onClick = (option: string) => {
-      onAction(fileId, option)
-    }
-  
+const Checkbox: FunctionComponent<{checked: boolean, onClick: () => void}> = ({checked, onClick}) => {
     return (
-      <div className="file-browser-context-menu" style={{ position: 'absolute', top: y, left: x}}>
-        {options.map(option => (
-          <div key={option.id} onClick={() => onClick(option.id)}>{option.label}</div>
-        ))}
-      </div>
+        <input type="checkbox" checked={checked} onClick={onClick} onChange={() => {}} style={{cursor: 'pointer'}} />
     )
 }
 

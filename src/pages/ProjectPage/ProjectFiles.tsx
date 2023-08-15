@@ -6,9 +6,10 @@ import FileBrowser2, { FileIcon } from "./FileBrowser/FileBrowser2";
 import FileEditor from "./FileEditor/FileEditor";
 import { useProject } from "./ProjectPageContext";
 import JobView from "./JobView/JobView";
+import { confirm } from "../../confirm_prompt_alert";
 
 const ProjectFiles: FunctionComponent<{width: number, height: number}> = ({width, height}) => {
-    const {files, openTab, deleteFile, closeTab, duplicateFile, renameFile, openTabs} = useProject()
+    const {files, openTab, deleteFile, closeTab, duplicateFile, renameFile, openTabs, refreshFiles} = useProject()
 
     const handleOpenFile = useCallback((fileName: string) => {
         openTab(`file:${fileName}`)
@@ -17,9 +18,9 @@ const ProjectFiles: FunctionComponent<{width: number, height: number}> = ({width
     const handleDeleteFile = useCallback(async (fileName: string) => {
         const okay = await confirm(`Delete ${fileName}?`)
         if (!okay) return
-        deleteFile(fileName)
+        deleteFile(fileName).then(() => refreshFiles())
         closeTab(`file:${fileName}`)
-    }, [deleteFile, closeTab])
+    }, [deleteFile, closeTab, refreshFiles])
 
     const handleDuplicateFile = useCallback(async (fileName: string) => {
         let newFileName: string | null
@@ -68,6 +69,8 @@ const ProjectFiles: FunctionComponent<{width: number, height: number}> = ({width
             hideSecondChild={openTabs.length === 0}
         >
             <FileBrowser2
+                width={0}
+                height={0}
                 files={files}
                 onOpenFile={handleOpenFile}
                 onDeleteFile={handleDeleteFile}

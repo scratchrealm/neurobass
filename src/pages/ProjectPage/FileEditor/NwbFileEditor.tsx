@@ -6,7 +6,7 @@ import Splitter from "../../../components/Splitter";
 import { fetchFile } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
 import { NBFile } from "../../../types/neurobass-types";
-import { AssetResponse } from "../ImportNwbWindow/DandiNwbSelector/types";
+import { AssetResponse } from "../DandiNwbSelector/types";
 import JobsWindow from "../JobsWindow/JobsWindow";
 import { useProject } from "../ProjectPageContext";
 import RunSpikeSortingWindow from "./RunSpikeSortingWindow/RunSpikeSortingWindow";
@@ -68,6 +68,10 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
     const dandisetVersion = metadata?.dandisetVersion || ''
     const dandiAssetId = metadata?.dandiAssetId || ''
     const dandiAssetPath = metadata?.dandiAssetPath || ''
+    const dandiStaging = metadata?.dandiStaging || false
+
+    const stagingStr = dandiStaging ? '-staging' : ''
+    const stagingStr2 = dandiStaging ? 'gui-staging.' : ''
 
     const handleOpenInNeurosift = useCallback(() => {
         const u = `https://flatironinstitute.github.io/neurosift/?p=/nwb&url=${nwbUrl}`
@@ -78,14 +82,14 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
         if (!dandisetId) return
         if (!dandiAssetId) return
         ; (async () => {
-            const response = await fetch(`https://api.dandiarchive.org/api/dandisets/${dandisetId}/versions/${dandisetVersion}/assets/${dandiAssetId}/`)
+            const response = await fetch(`https://api${stagingStr}.dandiarchive.org/api/dandisets/${dandisetId}/versions/${dandisetVersion}/assets/${dandiAssetId}/`)
             if (response.status === 200) {
                 const json = await response.json()
                 const assetResponse: AssetResponse = json
                 setAssetResponse(assetResponse)
             }
         })()
-    }, [dandisetId, dandiAssetId, dandisetVersion])
+    }, [dandisetId, dandiAssetId, dandisetVersion, stagingStr])
 
     if ((assetResponse) && (dandiAssetPath !== assetResponse.path)) {
         console.warn(`Mismatch between dandiAssetPath (${dandiAssetPath}) and assetResponse.path (${assetResponse.path})`)
@@ -108,13 +112,13 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
                     <tr>
                         <td>Dandiset:</td>
                         <td>
-                            {dandisetId && <a href={`https://dandiarchive.org/dandiset/${dandisetId}/${dandisetVersion}`} target="_blank" rel="noreferrer">
+                            {dandisetId && <a href={`https://${stagingStr2}dandiarchive.org/dandiset/${dandisetId}/${dandisetVersion}`} target="_blank" rel="noreferrer">
                                 {dandisetId} ({dandisetVersion || ''})
                             </a>}
                         </td>
                     </tr>
                     <tr>
-                        <td>Path:</td>
+                        <td>DANDI Path:</td>
                         <td>
                             {assetResponse?.path || ''}
                         </td>

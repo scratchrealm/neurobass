@@ -27,6 +27,7 @@ const useJob = (workspaceId: string, projectId: string, jobId: string) => {
         let canceled = false
         ;(async () => {
             setJob(undefined)
+            if (!jobId) return
             const job = await fetchJob(workspaceId, projectId, jobId, auth)
             if (canceled) return
             setJob(job)

@@ -1,7 +1,6 @@
 import { FunctionComponent, useEffect, useMemo, useReducer, useState } from "react"
-import Hyperlink from "../../../../components/Hyperlink"
-import formatByteCount from "../../FileBrowser/formatByteCount"
-import { formatTime } from "./SearchResults"
+import Hyperlink from "../../../components/Hyperlink"
+import formatByteCount from "../FileBrowser/formatByteCount"
 import { AssetsResponse, AssetsResponseItem, DandisetSearchResultItem, DandisetVersionInfo } from "./types"
 
 type DandisetViewProps = {
@@ -9,19 +8,23 @@ type DandisetViewProps = {
     width: number
     height: number
     onClickAsset: (assetItem: AssetsResponseItem) => void
+    useStaging?: boolean
 }
 
-const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, height, onClickAsset}) => {
+const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, height, onClickAsset, useStaging}) => {
     const [dandisetResponse, setDandisetResponse] = useState<DandisetSearchResultItem | null>(null)
     const [dandisetVersionInfo, setDandisetVersionInfo] = useState<DandisetVersionInfo | null>(null)
     const [assetsResponses, setAssetsResponses] = useState<AssetsResponse[]>([])
     const [incomplete, setIncomplete] = useState(false)
 
+    const stagingStr = useStaging ? '-staging' : ''
+    const stagingStr2 = useStaging ? 'gui-staging.' : ''
+
     useEffect(() => {
         let canceled = false
         setDandisetResponse(null)
         ; (async () => {
-            const response = await fetch(`https://api.dandiarchive.org/api/dandisets/${dandisetId}`)
+            const response = await fetch(`https://api${stagingStr}.dandiarchive.org/api/dandisets/${dandisetId}`)
             if (canceled) return
             if (response.status === 200) {
                 const json = await response.json()
@@ -30,7 +33,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
             }
         })()
         return () => {canceled = true}
-    }, [dandisetId])
+    }, [dandisetId, stagingStr])
 
     const {identifier, created, modified, contact_person, most_recent_published_version, draft_version} = dandisetResponse || {}
     const V = most_recent_published_version || draft_version
@@ -41,7 +44,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
         if (!dandisetResponse) return
         if (!V) return
         ; (async () => {
-            const response = await fetch(`https://api.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/info/`)
+            const response = await fetch(`https://api${stagingStr}.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/info/`)
             if (canceled) return
             if (response.status === 200) {
                 const json = await response.json()
@@ -50,7 +53,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
             }
         })()
         return () => {canceled = true}
-    }, [dandisetId, dandisetResponse, V])
+    }, [dandisetId, dandisetResponse, V, stagingStr])
 
     useEffect(() => {
         const maxNumPages = 10
@@ -63,7 +66,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
         if (!V) return
         ; (async () => {
             let rr: AssetsResponse[] = []
-            let uu: string | null = `https://api.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/assets/?page_size=1000`
+            let uu: string | null = `https://api${stagingStr}.dandiarchive.org/api/dandisets/${dandisetId}/versions/${V.version}/assets/?page_size=1000`
             let count = 0
             while (uu) {
                 if (count >= maxNumPages) {
@@ -83,7 +86,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
             }
         })()
         return () => {canceled = true}
-    }, [dandisetId, dandisetResponse, V])
+    }, [dandisetId, dandisetResponse, V, stagingStr])
 
     const allAssets = useMemo(() => {
         const rr: AssetsResponseItem[] = []
@@ -98,7 +101,7 @@ const DandisetView: FunctionComponent<DandisetViewProps> = ({dandisetId, width, 
     
     const X = dandisetVersionInfo
 
-    const externalLink = `https://dandiarchive.org/dandiset/${dandisetId}/${X.version}`
+    const externalLink = `https://${stagingStr2}dandiarchive.org/dandiset/${dandisetId}/${X.version}`
 
     return (
         <div style={{position: 'absolute', width, height, overflowY: 'auto'}}>

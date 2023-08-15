@@ -3,7 +3,7 @@ import HBoxLayout from "../../components/HBoxLayout";
 import { setUrlFile } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import { SetupWorkspacePage } from "../WorkspacePage/WorkspacePageContext";
-import ImportNwbWindow from "./ImportNwbWindow/ImportNwbWindow";
+import ManualNwbSelector from "./ManualNwbSelector/ManualNwbSelector";
 import ProjectFiles from "./ProjectFiles";
 // import ProjectLeftPanel from "./ProjectLeftPanel";
 import { SetupProjectPage, useProject } from "./ProjectPageContext";
@@ -62,7 +62,7 @@ const ProjectPageChild: FunctionComponent<Props> = ({width, height}) => {
                     </HBoxLayout>
                 </div>
                 <div style={{position: 'absolute', width, height, overflow: 'hidden', visibility: view === 'import-nwb' ? undefined : 'hidden', background: 'white'}}>
-                    <ImportNwbWindow
+                    <ManualNwbSelector
                         width={width}
                         height={height}
                         onCreateFile={handleCreateFile}

@@ -4,7 +4,8 @@ import { setUrlFile } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import useRoute from "../../useRoute";
 import { SetupWorkspacePage } from "../WorkspacePage/WorkspacePageContext";
-import DandiNwbSelector from "./ImportNwbWindow/DandiNwbSelector/DandiNwbSelector";
+import DandiNwbSelector from "./DandiNwbSelector/DandiNwbSelector";
+import ManualNwbSelector from "./ManualNwbSelector/ManualNwbSelector";
 import ProjectFiles from "./ProjectFiles";
 import ProjectHome from "./ProjectHome";
 import ProjectJobs from "./ProjectJobs";
@@ -30,7 +31,7 @@ const ProjectPage: FunctionComponent<Props> = ({projectId, width, height}) => {
     )
 }
 
-export type ProjectPageViewType = 'project-home' | 'project-files' | 'project-jobs' | 'dandi-import' | 'processing-tools'
+export type ProjectPageViewType = 'project-home' | 'project-files' | 'project-jobs' | 'dandi-import' | 'manual-import' | 'processing-tools'
 
 type ProjectPageView = {
     type: ProjectPageViewType
@@ -53,6 +54,10 @@ const projectPageViews: ProjectPageView[] = [
     {
         type: 'dandi-import',
         label: 'DANDI import'
+    },
+    {
+        type: 'manual-import',
+        label: 'Manual import'
     },
     {
         type: 'processing-tools',
@@ -138,16 +143,24 @@ const MainPanel: FunctionComponent<MainPanelProps> = ({width, height}) => {
         setRoute({page: 'project', projectId: project.projectId, tab: 'project-files'})
     }, [project, openTab, auth, refreshFiles, setRoute])
 
-    const handleImportNwbFile = useCallback((nwbUrl: string, dandisetId: string, dandisetVersion: string, assetId: string, assetPath: string) => {
+    const handleImportDandiNwbFile = useCallback((nwbUrl: string, dandisetId: string, dandisetVersion: string, assetId: string, assetPath: string, useStaging: boolean) => {
         const metadata = {
             dandisetId,
             dandisetVersion,
             dandiAssetId: assetId,
-            dandiAssetPath: assetPath
+            dandiAssetPath: assetPath,
+            dandiStaging: useStaging
         }
-        const fileName = dandisetId + '/' + assetPath
+        const stagingStr3 = useStaging ? 'staging-' : ''
+        const fileName = stagingStr3 + dandisetId + '/' + assetPath
         handleCreateFile(fileName, {url: nwbUrl, metadata})
     }, [handleCreateFile])
+
+    const handleImportManualNwbFile = useCallback((nwbUrl: string, fileName: string) => {
+        const metadata = {}
+        handleCreateFile(fileName, {url: nwbUrl, metadata})
+    }, [handleCreateFile])
+
     return (
         <div style={{position: 'absolute', width, height, overflow: 'hidden', background: 'white'}}>
             <div style={{position: 'absolute', width, height, visibility: currentView === 'project-home' ? undefined : 'hidden'}}>
@@ -172,7 +185,14 @@ const MainPanel: FunctionComponent<MainPanelProps> = ({width, height}) => {
                 <DandiNwbSelector
                     width={width}
                     height={height}
-                    onNwbFileSelected={handleImportNwbFile}
+                    onNwbFileSelected={handleImportDandiNwbFile}
+                />
+            </div>
+            <div style={{position: 'absolute', width, height, visibility: currentView === 'manual-import' ? undefined : 'hidden'}}>
+                <ManualNwbSelector
+                    width={width}
+                    height={height}
+                    onNwbFileSelected={handleImportManualNwbFile}
                 />
             </div>
         </div>

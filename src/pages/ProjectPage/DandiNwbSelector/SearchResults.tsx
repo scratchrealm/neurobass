@@ -1,7 +1,7 @@
-import { FunctionComponent, useMemo, useState } from "react"
-import Hyperlink from "../../../../components/Hyperlink"
-import Splitter from "../../../../components/Splitter"
-import formatByteCount from "../../FileBrowser/formatByteCount"
+import { FunctionComponent, useEffect, useState } from "react"
+import Hyperlink from "../../../components/Hyperlink"
+import Splitter from "../../../components/Splitter"
+import formatByteCount from "../FileBrowser/formatByteCount"
 import DandisetView from "./DandisetView"
 import { AssetsResponseItem, DandisetSearchResultItem } from "./types"
 
@@ -10,10 +10,15 @@ type SearchResultsProps = {
     height: number
     searchResults: DandisetSearchResultItem[]
     onClickAsset: (dandisetId: string, dandisetVersion: string, assetItem: AssetsResponseItem) => void
+    useStaging?: boolean
 }
 
-const SearchResults: FunctionComponent<SearchResultsProps> = ({width, height, searchResults, onClickAsset}) => {
+const SearchResults: FunctionComponent<SearchResultsProps> = ({width, height, searchResults, onClickAsset, useStaging}) => {
     const [selectedItem, setSelectedItem] = useState<DandisetSearchResultItem | null>(null)
+    useEffect(() => {
+        // reset the selected item when the useStaging changes
+        setSelectedItem(null)
+    }, [useStaging])
     return (
         <Splitter
             width={width}
@@ -34,6 +39,7 @@ const SearchResults: FunctionComponent<SearchResultsProps> = ({width, height, se
                 width={0}
                 height={0}
                 onClickAsset={(assetItem: AssetsResponseItem) => {onClickAsset(selectedItem?.identifier || '', selectedItem?.most_recent_published_version?.version || 'draft', assetItem)}}
+                useStaging={useStaging}
             />
         </Splitter>
     )

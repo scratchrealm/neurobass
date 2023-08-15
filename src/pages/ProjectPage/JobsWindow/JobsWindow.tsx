@@ -15,7 +15,7 @@ const queryParams = parseQuery(window.location.href)
 
 const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
     const {workspaceRole} = useWorkspace()
-    const {refreshJobs, createJob, jobs, openTabs} = useProject()
+    const {refreshJobs, createJob, jobs, openTabs, openTab} = useProject()
 
     const handleCreateScriptJob = useCallback(async () => {
         createJob({scriptFileName: fileName})
@@ -95,6 +95,7 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName }) => {
             <JobsTable
                 fileName={fileName}
                 jobs={filteredJobs}
+                onJobClicked={jobId => openTab(`job:${jobId}`)}
             />
         </>
     )

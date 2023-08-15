@@ -1,6 +1,7 @@
 import { FunctionComponent, useState } from "react";
 import Splitter from "../../components/Splitter";
 import JobsTable from "./JobsWindow/JobsTable";
+import JobView from "./JobView/JobView";
 import { useProject } from "./ProjectPageContext";
 
 const ProjectJobs: FunctionComponent<{width: number, height: number}> = ({width, height}) => {
@@ -18,8 +19,13 @@ const ProjectJobs: FunctionComponent<{width: number, height: number}> = ({width,
             <JobsTable
                 fileName=""
                 jobs={jobs}
+                onJobClicked={jobId => setSelectedJobId(jobId)}
             />
-            <div />
+            <JobView
+                width={0}
+                height={0}
+                jobId={selectedJobId || ''}
+            />
         </Splitter>
     )
 }

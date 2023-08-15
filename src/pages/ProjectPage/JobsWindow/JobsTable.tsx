@@ -13,10 +13,10 @@ import { useProject } from "../ProjectPageContext";
 type Props = {
     fileName: string
     jobs: NBJob[] | undefined
+    onJobClicked: (jobId: string) => void
 }
 
-const JobsTable: FunctionComponent<Props> = ({ fileName, jobs }) => {
-    const {openTab} = useProject()
+const JobsTable: FunctionComponent<Props> = ({ fileName, jobs, onJobClicked }) => {
     const {workspaceRole} = useWorkspace()
 
     const sortedJobs = useMemo(() => {
@@ -46,7 +46,7 @@ const JobsTable: FunctionComponent<Props> = ({ fileName, jobs }) => {
                                 )
                             }</td>
                             <td>
-                                <Hyperlink onClick={() => openTab(`job:${jj.jobId}`)}>
+                                <Hyperlink onClick={() => onJobClicked(jj.jobId)}>
                                     {jj.jobId}
                                 </Hyperlink>
                             </td>
@@ -54,7 +54,7 @@ const JobsTable: FunctionComponent<Props> = ({ fileName, jobs }) => {
                                 jj.status !== 'failed' ? (
                                     <span>{jj.status}</span>
                                 ) : (
-                                    <Hyperlink onClick={() => openTab(`job:${jj.jobId}`)}>
+                                    <Hyperlink onClick={() => onJobClicked(jj.jobId)}>
                                         <span style={{color: 'red'}}>{jj.status}: {jj.error}</span>
                                     </Hyperlink>
                                 )

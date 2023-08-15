@@ -1,10 +1,11 @@
 import { FunctionComponent, useEffect, useMemo, useState } from "react";
 import ComputeResourceIdComponent from "../../ComputeResourceIdComponent";
-import { fetchComputeResource } from "../../dbInterface/dbInterface";
+import { fetchComputeResource, fetchJobsForComputeResource } from "../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../GithubAuth/useGithubAuth";
 import { timeAgoString } from "../../timeStrings";
-import { NBComputeResource } from "../../types/neurobass-types";
+import { NBComputeResource, NBJob } from "../../types/neurobass-types";
 import UserIdComponent from "../../UserIdComponent";
+import JobsTable from "../ProjectPage/JobsWindow/JobsTable";
 import ComputeResourceJobsTable from "./ComputeResourceJobsTable";
 
 type Props = {
@@ -28,6 +29,24 @@ const ComputeResourcesPage: FunctionComponent<Props> = ({width, height, computeR
         })()
         return () => {canceled = true}
     }, [computeResourceId, auth])
+
+    const [jobs, setJobs] = useState<NBJob[] | undefined>()
+
+    useEffect(() => {
+        (async () => {
+            const sj = await fetchJobsForComputeResource(computeResourceId, auth)
+            setJobs(sj)
+        })()
+    }, [computeResourceId, auth])
+
+    const sortedJobs = useMemo(() => {
+        return jobs ? [...jobs].sort((a, b) => (b.timestampCreated - a.timestampCreated))
+            .sort((a, b) => {
+                const statuses = ['running', 'pending', 'failed', 'completed']
+                return statuses.indexOf(a.status) - statuses.indexOf(b.status)
+            }) : undefined
+    }, [jobs])
+
     return (
         <div style={{padding: 20}}>
             <h3>
@@ -57,8 +76,12 @@ const ComputeResourcesPage: FunctionComponent<Props> = ({width, height, computeR
             <hr />
             <p>Full ID: {computeResource?.computeResourceId}</p>
             <hr />
-            <ComputeResourceJobsTable
-                computeResourceId={computeResourceId}
+            <JobsTable
+                width={width}
+                height={height}
+                jobs={sortedJobs}
+                fileName={""}
+                onJobClicked={() => {}}
             />
         </div>
     )

@@ -17,6 +17,8 @@ const ProjectJobs: FunctionComponent<{width: number, height: number}> = ({width,
             hideSecondChild={selectedJobId === undefined || (!jobs?.map(j => j.jobId).includes(selectedJobId))}
         >
             <JobsTable
+                width={0}
+                height={0}
                 fileName=""
                 jobs={jobs}
                 onJobClicked={jobId => setSelectedJobId(jobId)}

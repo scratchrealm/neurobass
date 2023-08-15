@@ -13,9 +13,10 @@ type FileBrowserMenuBarProps = {
     width: number
     height: number
     selectedFileNames: string[]
+    onResetSelection: () => void
 }
 
-const FileBrowserMenuBar: FunctionComponent<FileBrowserMenuBarProps> = ({ width, height, selectedFileNames }) => {
+const FileBrowserMenuBar: FunctionComponent<FileBrowserMenuBarProps> = ({ width, height, selectedFileNames, onResetSelection }) => {
     const {deleteFile, renameFile, duplicateFile, refreshFiles, workspaceId, projectId, openTab} = useProject()
     const [operating, setOperating] = useState(false)
     const {visible: newFileWindowVisible, handleOpen: openNewFileWindow, handleClose: closeNewFileWindow} = useModalDialog()
@@ -27,13 +28,13 @@ const FileBrowserMenuBar: FunctionComponent<FileBrowserMenuBarProps> = ({ width,
             for (const fileName of selectedFileNames) {
                 await deleteFile(fileName)
             }
-            refreshFiles()
         }
         finally {
             setOperating(false)
             refreshFiles()
+            onResetSelection()
         }
-    }, [selectedFileNames, deleteFile, refreshFiles])
+    }, [selectedFileNames, deleteFile, refreshFiles, onResetSelection])
 
     const handleRename = useCallback(async () => {
         const oldFileName = selectedFileNames[0]

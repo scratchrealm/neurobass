@@ -29,29 +29,29 @@ type FileItem = {
     timestampCreated: number
 }
 
-type SelectedFileNames = Set<string>
+export type SelectedStrings = Set<string>
 
-type SelectedFileNamesAction = {
+export type SelectedStringsAction = {
     type: 'toggle'
-    fileName: string
+    value: string
 } | {
     type: 'set'
-    fileNames: string[]
+    values: Set<string>
 }
 
-const selectedFileNamesReducer = (state: SelectedFileNames, action: SelectedFileNamesAction): SelectedFileNames => {
+export const selectedStringsReducer = (state: SelectedStrings, action: SelectedStringsAction): SelectedStrings => {
     if (action.type === 'toggle') {
         const ret = new Set(state)
-        if (ret.has(action.fileName)) {
-            ret.delete(action.fileName)
+        if (ret.has(action.value)) {
+            ret.delete(action.value)
         }
         else {
-            ret.add(action.fileName)
+            ret.add(action.value)
         }
         return ret
     }
     else if (action.type === 'set') {
-        return new Set(action.fileNames)
+        return new Set(action.values)
     }
     else {
         return state
@@ -61,7 +61,7 @@ const selectedFileNamesReducer = (state: SelectedFileNames, action: SelectedFile
 const FileBrowser2: FunctionComponent<Props> = ({width, height, onOpenFile, files, hideSizeColumn}) => {
     const {currentTabName} = useProject()
 
-    const [selectedFileNames, selectedFileNamesDispatch] = useReducer(selectedFileNamesReducer, new Set<string>())
+    const [selectedFileNames, selectedFileNamesDispatch] = useReducer(selectedStringsReducer, new Set<string>())
 
     const fileItems = useMemo(() => {
         const ret: FileItem[] = []
@@ -103,6 +103,7 @@ const FileBrowser2: FunctionComponent<Props> = ({width, height, onOpenFile, file
                     width={width - hPadding * 2}
                     height={menuBarHeight - vPadding * 2}
                     selectedFileNames={Array.from(selectedFileNames)}
+                    onResetSelection={() => selectedFileNamesDispatch({type: 'set', values: new Set()})}
                 />
             </div>
             <div style={{position: 'absolute', width: width - hPadding * 2, height: height - menuBarHeight - vPadding * 2, top: menuBarHeight, overflowY: 'scroll', paddingLeft: hPadding, paddingRight: hPadding, paddingTop: vPadding, paddingBottom: vPadding}}>
@@ -120,7 +121,7 @@ const FileBrowser2: FunctionComponent<Props> = ({width, height, onOpenFile, file
                         {
                             fileItems.map(x => (
                                 <tr key={x.id}>
-                                    <td style={{width: colWidth}}><Checkbox checked={selectedFileNames.has(x.name)} onClick={() => selectedFileNamesDispatch({type: 'toggle', fileName: x.name})} /></td>
+                                    <td style={{width: colWidth}}><TableCheckbox checked={selectedFileNames.has(x.name)} onClick={() => selectedFileNamesDispatch({type: 'toggle', value: x.name})} /></td>
                                     <td style={{width: colWidth}}><FileIcon fileName={x.name} /></td>
                                     <td>
                                         <Hyperlink
@@ -159,7 +160,7 @@ export const FileIcon: FunctionComponent<{fileName: string}> = ({fileName}) => {
     }
 }
 
-const Checkbox: FunctionComponent<{checked: boolean, onClick: () => void}> = ({checked, onClick}) => {
+export const TableCheckbox: FunctionComponent<{checked: boolean, onClick: () => void}> = ({checked, onClick}) => {
     return (
         <input type="checkbox" checked={checked} onClick={onClick} onChange={() => {}} style={{cursor: 'pointer'}} />
     )

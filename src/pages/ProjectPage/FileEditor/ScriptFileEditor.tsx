@@ -1,6 +1,8 @@
-import { FunctionComponent } from "react";
+import { FunctionComponent, useCallback, useMemo, useState } from "react";
 import Splitter from "../../../components/Splitter";
+import { useWorkspace } from "../../WorkspacePage/WorkspacePageContext";
 import JobsWindow from "../JobsWindow/JobsWindow";
+import { useProject } from "../ProjectPageContext";
 import TextEditor from "./TextEditor";
 
 type Props = {
@@ -14,8 +16,65 @@ type Props = {
     height: number
 }
 
+const queryStringUrl = window.location.search
+const queryParams = new URLSearchParams(queryStringUrl)
+
 const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSaveContent, editedFileContent, setEditedFileContent, readOnly, width, height}) => {
     const fileType = fileName.split('.').pop()
+
+    const {createJob, jobs, openTabs} = useProject()
+    const {workspaceRole} = useWorkspace()
+
+    const [createJobTitle, setCreateJobTitle] = useState('Create job')
+
+    const handleCreateJob = useCallback(() => {
+        createJob({scriptFileName: fileName})
+    }, [createJob, fileName])
+
+    const filteredJobs = useMemo(() => {
+        if (!jobs) return undefined
+        if (fileName.endsWith('.py')) {
+            return jobs.filter(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName))))
+        }
+        else if (fileName.endsWith('.nwb')) {
+            return jobs.filter(jj => (jj.inputFiles.map(x => (x.fileName)).includes(fileName)))
+        }
+        else return jobs
+    }, [jobs, fileName])
+
+    const canCreateJob = useMemo(() => {
+        if (!jobs) return false // not loaded yet
+        const openTab = openTabs.find(t => t.tabName === `file:${fileName}`)
+        if (!openTab) {
+            setCreateJobTitle('Unable to find open tab')
+            return false
+        }
+        if (!openTab.content) {
+            setCreateJobTitle('File is empty')
+            return false
+        }
+        if (openTab.content !== openTab.editedContent) {
+            setCreateJobTitle('File has unsaved changes')
+            return false
+        }
+        const pendingJob = filteredJobs && filteredJobs.find(jj => (jj.status === 'pending'))
+        const runningJob = filteredJobs && filteredJobs.find(jj => (jj.status === 'running'))
+        if ((pendingJob) || (runningJob)) {
+            if (!(queryParams.get('test') === '1')) {
+                setCreateJobTitle('A job is already pending or running for this script.')
+                return false
+            }
+        }
+        if (workspaceRole === 'admin' || workspaceRole === 'editor') {
+            setCreateJobTitle('Create job')
+            return true
+        }
+        else {
+            setCreateJobTitle('You do not have permission to run scripts for this project.')
+        }
+        return false
+    }, [openTabs, jobs, filteredJobs, fileName, workspaceRole])
+
     return (
         <Splitter
             width={width}
@@ -43,6 +102,9 @@ const ScriptFileEditor: FunctionComponent<Props> = ({fileName, fileContent, onSa
                 width={0}
                 height={0}
                 fileName={fileName}
+                onCreateJob={handleCreateJob}
+                createJobEnabled={canCreateJob}
+                createJobTitle={createJobTitle}
             />
         </Splitter>
     )

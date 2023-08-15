@@ -19,7 +19,7 @@ const getDataBlobHandler = async (request: GetDataBlobRequest, o: {verifiedClien
         sha1: request.sha1
     }))
     if (!dataBlob) {
-        throw Error('Data blob not found')
+        throw Error(`Data blob not found: ${request.workspaceId} ${request.projectId} ${request.sha1}`)
     }
     if (!isNBDataBlob(dataBlob)) {
         console.warn(dataBlob)

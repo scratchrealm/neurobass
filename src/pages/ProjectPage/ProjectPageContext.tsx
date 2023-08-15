@@ -126,7 +126,7 @@ type ProjectPageContextType = {
     deleteProject: () => Promise<void>
     setProjectProperty: (property: 'name', value: any) => void
     createJob: (o: {scriptFileName: string}) => void
-    deleteJob: (jobId: string) => void
+    deleteJob: (jobId: string) => Promise<void>
     refreshJobs: () => void
     deleteFile: (fileName: string) => Promise<void>
     duplicateFile: (fileName: string, newFileName: string) => Promise<void>
@@ -149,7 +149,7 @@ const ProjectPageContext = React.createContext<ProjectPageContextType>({
     deleteProject: async () => {},
     setProjectProperty: () => {},
     createJob: () => {},
-    deleteJob: () => {},
+    deleteJob: async () => {},
     refreshJobs: () => {},
     deleteFile: async () => {},
     duplicateFile: async () => {},
@@ -262,8 +262,7 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
     const deleteJobHandler = useCallback(async (jobId: string) => {
         if (!project) return
         await deleteJob(project.workspaceId, projectId, jobId, auth)
-        refreshJobs()
-    }, [project, projectId, refreshJobs, auth])
+    }, [project, projectId, auth])
 
     const deleteProjectHandler = useMemo(() => (async () => {
         if (!project) return

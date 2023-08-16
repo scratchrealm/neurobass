@@ -189,3 +189,50 @@ export const isNBComputeResource = (x: any): x is NBComputeResource => {
         timestampCreated: isNumber
     })
 }
+
+export type ProcessingToolSchema = {
+    title: string
+    description?: string
+    type?: string
+    properties: {
+        [key: string]: {
+            title: string
+            description?: string
+            type?: string
+            allOf?: {
+                $ref: string
+            }[]
+        }
+    }
+    required?: string[]
+    definitions?: {
+        [key: string]: ProcessingToolSchema
+    }
+}
+
+export const isProcessingToolSchema = (x: any): x is ProcessingToolSchema => {
+    return validateObject(x, {
+        title: isString,
+        description: optional(isString),
+        type: optional(isString),
+        properties: () => true,
+        required: optional(isArrayOf(isString)),
+        definitions: optional(() => true)
+    })
+}
+
+export type ComputeResourceSpec = {
+    processing_tools: {
+        name: string
+        schema: ProcessingToolSchema
+    }[]
+}
+
+export const isComputeResourceSpec = (x: any): x is ComputeResourceSpec => {
+    return validateObject(x, {
+        processing_tools: isArrayOf(y => (validateObject(y, {
+            name: isString,
+            schema: isProcessingToolSchema
+        })))
+    })
+}

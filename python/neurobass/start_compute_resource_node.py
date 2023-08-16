@@ -1,10 +1,13 @@
 import sys
 import os
 import yaml
+import json
 from pathlib import Path
 import subprocess
 from threading import Thread
 import signal
+import importlib
+import inspect
 from .init_compute_resource_node import env_var_keys
 
 
@@ -33,6 +36,34 @@ class Daemon:
         sys.exit(0)
 
     def start(self):
+        from .NeurobassPluginTypes import NeurobassPlugin, NeurobassPluginContext, NeurobassProcessingTool
+
+        class NeurobassPluginContextImpl(NeurobassPluginContext):
+            def __init__(self):
+                self._processing_tools: list[NeurobassProcessingTool] = []
+            def register_processing_tool(self, tool: NeurobassPlugin):
+                self._processing_tools.append(tool)
+
+        plugin_context = NeurobassPluginContextImpl()
+        plugin_package_names = ['neurobass']
+        for plugin_package_name in plugin_package_names:
+            module = importlib.import_module(plugin_package_name)
+            for attr_name in dir(module):
+                X = getattr(module, attr_name)
+                if inspect.isclass(X) and issubclass(X, NeurobassPlugin):
+                    X.initialize(plugin_context)
+        spec = {
+            'processing_tools': [
+                {
+                    'name': pt.get_name(),
+                    'schema': pt.get_schema()
+                }
+                for pt in plugin_context._processing_tools
+            ]
+        }
+        with open(f'{self.dir}/spec.json', 'w') as f:
+            json.dump(spec, f, indent=2)
+
         cmd = ["node", f'{this_directory}/js/dist/index.js', "start", "--dir", self.dir]
         analysis_scripts_dir = f'{Path(__file__).parent}/analysis_scripts'
         env0 = dict(

@@ -1,4 +1,4 @@
-import { isNBProject, isNBFile, isNBComputeResource, isNBJob, isNBWorkspace, NBProject, NBFile, NBComputeResource, NBJob, NBWorkspace } from "./neurobass-types"
+import { isNBProject, isNBFile, isNBComputeResource, isNBJob, isNBWorkspace, NBProject, NBFile, NBComputeResource, NBJob, NBWorkspace, ComputeResourceSpec, isComputeResourceSpec } from "./neurobass-types"
 import validateObject, { isArrayOf, isBoolean, isEqualTo, isNumber, isOneOf, isString, optional } from "./validateObject"
 
 // getWorkspaces
@@ -913,6 +913,62 @@ export const isGetPubsubSubscriptionResponse = (x: any): x is GetPubsubSubscript
     })
 }
 
+// SetComputeResourceSpec
+
+export type SetComputeResourceSpecRequest = {
+    type: 'setComputeResourceSpec'
+    timestamp: number
+    computeResourceId: string
+    spec: ComputeResourceSpec
+}
+
+export const isSetComputeResourceSpecRequest = (x: any): x is SetComputeResourceSpecRequest => {
+    return validateObject(x, {
+        type: isEqualTo('setComputeResourceSpec'),
+        timestamp: isNumber,
+        computeResourceId: isString,
+        spec: isComputeResourceSpec
+    })
+}
+
+export type SetComputeResourceSpecResponse = {
+    type: 'setComputeResourceSpec'
+}
+
+export const isSetComputeResourceSpecResponse = (x: any): x is SetComputeResourceSpecResponse => {
+    return validateObject(x, {
+        type: isEqualTo('setComputeResourceSpec')
+    })
+}
+
+// GetComputeResourceSpec
+
+export type GetComputeResourceSpecRequest = {
+    type: 'getComputeResourceSpec'
+    timestamp: number
+    computeResourceId: string
+}
+
+export const isGetComputeResourceSpecRequest = (x: any): x is GetComputeResourceSpecRequest => {
+    return validateObject(x, {
+        type: isEqualTo('getComputeResourceSpec'),
+        timestamp: isNumber,
+        computeResourceId: isString
+    })
+}
+
+export type GetComputeResourceSpecResponse = {
+    type: 'getComputeResourceSpec'
+    spec: ComputeResourceSpec
+}
+
+export const isGetComputeResourceSpecResponse = (x: any): x is GetComputeResourceSpecResponse => {
+    return validateObject(x, {
+        type: isEqualTo('getComputeResourceSpec'),
+        spec: isComputeResourceSpec
+    })
+}
+
 // NeurobassRequestPayload
 
 export type NeurobassRequestPayload =
@@ -944,7 +1000,8 @@ export type NeurobassRequestPayload =
     GetJobsRequest |
     GetActiveComputeResourceNodesRequest |
     SetJobPropertyRequest |
-    GetPubsubSubscriptionRequest
+    GetPubsubSubscriptionRequest |
+    SetComputeResourceSpecRequest
 
 export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload => {
     return isOneOf([
@@ -976,7 +1033,8 @@ export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload 
         isGetJobsRequest,
         isGetActiveComputeResourceNodesRequest,
         isSetJobPropertyRequest,
-        isGetPubsubSubscriptionRequest
+        isGetPubsubSubscriptionRequest,
+        isSetComputeResourceSpecRequest
     ])(x)
 }
 
@@ -1031,7 +1089,8 @@ export type NeurobassResponse =
     GetJobsResponse |
     GetActiveComputeResourceNodesResponse |
     SetJobPropertyResponse |
-    GetPubsubSubscriptionResponse
+    GetPubsubSubscriptionResponse |
+    SetComputeResourceSpecResponse
 
 export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
     return isOneOf([
@@ -1063,6 +1122,7 @@ export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
         isGetJobsResponse,
         isGetActiveComputeResourceNodesResponse,
         isSetJobPropertyResponse,
-        isGetPubsubSubscriptionResponse
+        isGetPubsubSubscriptionResponse,
+        isSetComputeResourceSpecResponse
     ])(x)
 }

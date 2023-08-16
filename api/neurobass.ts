@@ -30,8 +30,10 @@ import setJobPropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setJob
 import setWorkspacePropertyHandler from '../apiHelpers/NeurobassRequestHandlers/setWorkspacePropertyHandler'
 import setWorkspaceUsersHandler from '../apiHelpers/NeurobassRequestHandlers/setWorkspaceUsersHandler'
 import getPubsubSubscriptionHandler from '../apiHelpers/NeurobassRequestHandlers/getPubsubSubscriptionHandler'
+import setComputeResourceSpecHandler from '../apiHelpers/NeurobassRequestHandlers/setComputeResourceSpecHandler'
+import getComputeResourceSpecHandler from '../apiHelpers/NeurobassRequestHandlers/getComputeResourceSpecHandler'
 import verifySignature from '../apiHelpers/verifySignature'
-import { isCreateProjectRequest, isCreateJobRequest, isCreateWorkspaceRequest, isDeleteComputeResourceRequest, isDeleteFileRequest, isDeleteProjectRequest, isDeleteJobRequest, isDeleteWorkspaceRequest, isDuplicateFileRequest, isGetActiveComputeResourceNodesRequest, isGetComputeResourceRequest, isGetComputeResourcesRequest, isGetDataBlobRequest, isGetJobsRequest, isGetFileRequest, isGetFilesRequest, isGetProjectRequest, isGetProjectsRequest, isGetPubsubSubscriptionRequest, isGetJobRequest, isGetWorkspaceRequest, isGetWorkspacesRequest, isNeurobassRequest, isRegisterComputeResourceRequest, isRenameFileRequest, isSetFileRequest, isSetProjectPropertyRequest, isSetJobPropertyRequest, isSetWorkspacePropertyRequest, isSetWorkspaceUsersRequest } from '../src/types/NeurobassRequest'
+import { isCreateProjectRequest, isCreateJobRequest, isCreateWorkspaceRequest, isDeleteComputeResourceRequest, isDeleteFileRequest, isDeleteProjectRequest, isDeleteJobRequest, isDeleteWorkspaceRequest, isDuplicateFileRequest, isGetActiveComputeResourceNodesRequest, isGetComputeResourceRequest, isGetComputeResourcesRequest, isGetDataBlobRequest, isGetJobsRequest, isGetFileRequest, isGetFilesRequest, isGetProjectRequest, isGetProjectsRequest, isGetPubsubSubscriptionRequest, isGetJobRequest, isGetWorkspaceRequest, isGetWorkspacesRequest, isNeurobassRequest, isRegisterComputeResourceRequest, isRenameFileRequest, isSetFileRequest, isSetProjectPropertyRequest, isSetJobPropertyRequest, isSetWorkspacePropertyRequest, isSetWorkspaceUsersRequest, isSetComputeResourceSpecRequest, isGetComputeResourceSpecRequest } from '../src/types/NeurobassRequest'
 
 const ADMIN_USER_IDS = JSON.parse(process.env.ADMIN_USER_IDS || '[]') as string[]
 
@@ -191,6 +193,12 @@ module.exports = (req: VercelRequest, res: VercelResponse) => {
         }
         else if (isGetPubsubSubscriptionRequest(payload)) {
             return await getPubsubSubscriptionHandler(payload, {verifiedClientId, verifiedUserId})
+        }
+        else if (isSetComputeResourceSpecRequest(payload)) {
+            return await setComputeResourceSpecHandler(payload, {verifiedClientId, verifiedUserId})
+        }
+        else if (isGetComputeResourceSpecRequest(payload)) {
+            return await getComputeResourceSpecHandler(payload, {verifiedClientId, verifiedUserId})
         }
         else {
             throw Error(`Unexpected request type: ${(payload as any).type}`)

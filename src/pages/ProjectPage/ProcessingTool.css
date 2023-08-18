@@ -19,4 +19,10 @@
 
 .ProcessingToolParameters {
     font-size: 14px;
+    color: #444;
+}
+
+.ProcessingToolTags {
+    font-size: 14px;
+    color: #444;
 }

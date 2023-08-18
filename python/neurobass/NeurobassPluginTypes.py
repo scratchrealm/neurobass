@@ -72,6 +72,16 @@ class NeurobassProcessingTool(ABC):
             dict: the attributes of the processing tool
         """
         return {}
+    
+    @classmethod
+    @abstractmethod
+    def get_tags(cls) -> list:
+        """Get the tags of the processing tool
+
+        Returns:
+            list: the tags of the processing tool
+        """
+        return []
 
     @classmethod
     @abstractmethod

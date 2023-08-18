@@ -9,8 +9,6 @@ type ProcessingToolsViewProps = {
     height: number
 }
 
-const processingToolHeight = 220
-
 const ProcessingToolsView: FunctionComponent<ProcessingToolsViewProps> = ({width, height}) => {
     const {computeResourceSpec} = useWorkspace()
     const processing_tools = computeResourceSpec?.processing_tools
@@ -24,7 +22,6 @@ const ProcessingToolsView: FunctionComponent<ProcessingToolsViewProps> = ({width
                         <ProcessingToolView
                             tool={tool}
                             width={width}
-                            height={processingToolHeight}
                         />
                         <hr />
                     </span>
@@ -35,15 +32,14 @@ const ProcessingToolsView: FunctionComponent<ProcessingToolsViewProps> = ({width
 }
 
 type ProcessingToolViewProps = {
-    tool: {name: string, attributes: any, schema: ProcessingToolSchema}
+    tool: {name: string, attributes: any, tags: string[], schema: ProcessingToolSchema}
     width: number
-    height: number
 }
 
-const ProcessingToolView: FunctionComponent<ProcessingToolViewProps> = ({tool, width, height}) => {
+const ProcessingToolView: FunctionComponent<ProcessingToolViewProps> = ({tool, width}) => {
     const wipElmt = tool.attributes.wip ? <span style={{color: 'darkblue'}}> (WIP)</span> : null
     return (
-        <div className="ProcessingTool" style={{position: 'relative', width: width - 20, height: height - 20, padding: 10, overflowY: 'auto'}}>
+        <div className="ProcessingTool" style={{position: 'relative', width: width - 20, padding: 10, overflowY: 'auto'}}>
             <div style={{display: 'flex', flexDirection: 'row'}}>
                 <div className="ProcessingToolImage" style={{width: 100,  marginRight: 10}}>
                     {
@@ -57,8 +53,13 @@ const ProcessingToolView: FunctionComponent<ProcessingToolViewProps> = ({tool, w
                 <div className="ProcessingToolSecondColumn" style={{flex: 1}}>
                     <div className="ProcessingToolTitle">{tool.attributes.label || tool.name}{wipElmt}</div>
                     <div className="ProcessingToolDescription">{tool.schema.description}</div>
+                    <div>&nbsp;</div>
                     <div className="ProcessingToolParameters">
                         <ProcessingToolParametersView schema={tool.schema} />
+                    </div>
+                    <div>&nbsp;</div>
+                    <div className="ProcessingToolTags">
+                        |&nbsp;{(tool.tags || []).map((tag, i) => <span key={i} className="ProcessingToolTag">{tag}&nbsp;|&nbsp;</span>)}
                     </div>
                 </div>
             </div>
@@ -70,44 +71,56 @@ type ProcessingToolParametersViewProps = {
     schema: ProcessingToolSchema
 }
 
-const ProcessingToolParametersView: FunctionComponent<ProcessingToolParametersViewProps> = ({schema}) => {
-    const {inputs, outputs, parameters} = useMemo(() => {
-        const inputs: {name: string, description: string}[] = []
-        const outputs: {name: string, description: string}[] = []
-        const parameters: {name: string, description: string}[] = []
+export class ProcessingToolSchemaParser {
+    #inputs: {name: string, description: string}[] = []
+    #outputs: {name: string, description: string}[] = []
+    #parameters: {name: string, description: string}[] = []
+    constructor(private schema: ProcessingToolSchema) {
         for (const k in schema.properties) {
             const p = schema.properties[k]
             if (p.type) {
-                parameters.push({name: k, description: p.description || ''})
+                this.#parameters.push({name: k, description: p.description || ''})
             }
             else if (p.allOf) {
                 if (p.allOf[0]['$ref'] === '#/definitions/InputFile') {
-                    inputs.push({name: k, description: p.description || ''})
+                    this.#inputs.push({name: k, description: p.description || ''})
                 }
                 else if (p.allOf[0]['$ref'] === '#/definitions/OutputFile') {
-                    outputs.push({name: k, description: p.description || ''})
+                    this.#outputs.push({name: k, description: p.description || ''})
                 }
                 else {
-                    parameters.push({name: k, description: p.description || ''})
+                    this.#parameters.push({name: k, description: p.description || ''})
                 }
             }
         }
-        return {inputs, outputs, parameters}
-    }, [schema])
+    }
+    get inputs() {
+        return this.#inputs
+    }
+    get outputs() {
+        return this.#outputs
+    }
+    get parameters() {
+        return this.#parameters
+    }
+}
+
+const ProcessingToolParametersView: FunctionComponent<ProcessingToolParametersViewProps> = ({schema}) => {
+    const S = useMemo(() => (new ProcessingToolSchemaParser(schema)), [schema])
     return (
-        <div style={{paddingLeft: 20}}>
+        <div>
             <div>
-                {inputs.map((p, i) => <div key={i}>
+                {S.inputs.map((p, i) => <div key={i}>
                     {p.name} - {p.description}
                 </div>)}
             </div>
             <div>
-                {outputs.map((p, i) => <div key={i}>
+                {S.outputs.map((p, i) => <div key={i}>
                     {p.name} - {p.description}
                 </div>)}
             </div>
             <div>
-                {parameters.map((p, i) => <div key={i}>
+                {S.parameters.map((p, i) => <div key={i}>
                     {p.name} - {p.description}
                 </div>)}
             </div>

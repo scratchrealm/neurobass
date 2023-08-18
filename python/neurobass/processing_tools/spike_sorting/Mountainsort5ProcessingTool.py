@@ -1,3 +1,4 @@
+from typing import List
 import os
 import json
 from pydantic import BaseModel, Field
@@ -54,6 +55,9 @@ class Mountainsort5ProcessingTool(NeurobassProcessingTool):
             'logo_url': 'https://avatars.githubusercontent.com/u/32853892?s=200&v=4',
             'label': 'MountainSort 5'
         }
+    @classmethod
+    def get_tags(cls) -> List[str]:
+        return ['spike_sorting', 'spike_sorter']
     @classmethod
     def get_schema(cls) -> dict:
         return json.loads(Mountainsort5Model.schema_json())

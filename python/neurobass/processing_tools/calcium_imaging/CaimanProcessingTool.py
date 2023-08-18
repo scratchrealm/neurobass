@@ -26,6 +26,9 @@ class CaimanProcessingTool(NeurobassProcessingTool):
             'label': 'CaImAn'
         }
     @classmethod
+    def get_tags(cls) -> List[str]:
+        return ['calcium_imaging']
+    @classmethod
     def get_schema(cls) -> dict:
         return json.loads(CaimanModel.schema_json())
     @classmethod

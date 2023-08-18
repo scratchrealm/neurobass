@@ -205,7 +205,10 @@ export type ProcessingToolSchema = {
         }
     }
     required?: string[]
-    definitions?: {
+    definitions?: { // depending on the version of pydantic, this is either definitions or $defs
+        [key: string]: ProcessingToolSchema
+    },
+    "$defs"?: {
         [key: string]: ProcessingToolSchema
     }
 }
@@ -217,7 +220,8 @@ export const isProcessingToolSchema = (x: any): x is ProcessingToolSchema => {
         type: optional(isString),
         properties: () => true,
         required: optional(isArrayOf(isString)),
-        definitions: optional(() => true)
+        definitions: optional(() => true),
+        "$defs": optional(() => true)
     })
 }
 
@@ -225,6 +229,7 @@ export type ComputeResourceSpec = {
     processing_tools: {
         name: string
         attributes: any
+        tags: string[]
         schema: ProcessingToolSchema
     }[]
 }
@@ -234,6 +239,7 @@ export const isComputeResourceSpec = (x: any): x is ComputeResourceSpec => {
         processing_tools: isArrayOf(y => (validateObject(y, {
             name: isString,
             attributes: () => true,
+            tags: optional(isArrayOf(isString)),
             schema: isProcessingToolSchema
         })))
     })

@@ -58,6 +58,9 @@ class Kilosort3ProcessingTool(NeurobassProcessingTool):
             'label': 'Kilosort 3'
         }
     @classmethod
+    def get_tags(cls) -> List[str]:
+        return ['spike_sorting', 'spike_sorter']
+    @classmethod
     def get_schema(cls) -> dict:
         return json.loads(Kilosort3Model.schema_json())
     @classmethod

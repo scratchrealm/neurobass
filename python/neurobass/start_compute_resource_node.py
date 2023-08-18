@@ -56,6 +56,7 @@ class Daemon:
                 {
                     'name': pt.get_name(),
                     'attributes': pt.get_attributes(),
+                    'tags': pt.get_tags(),
                     'schema': pt.get_schema()
                 }
                 for pt in plugin_context._processing_tools

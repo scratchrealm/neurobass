@@ -115,7 +115,7 @@ export class RunningJob {
     constructor(public job: NBJob) {
     }
     async initiate(): Promise<boolean> {
-        console.info(`Initiating job: ${this.job.jobId} - ${this.job.processType}`)
+        console.info(`Initiating job: ${this.job.jobId} - ${this.job.toolName}`)
         const okay = await this._setJobProperty('status', 'running')
         if (!okay) {
             console.warn('Unable to set job status to running')
@@ -290,9 +290,9 @@ export class RunningJob {
             await this._setJobProperty('consoleOutput', consoleOutput)
         }
         try {
-            const processType = this.job.processType
-            if (!['script', 'mountainsort5', 'kilosort3'].includes(processType)) {
-                throw Error(`Unexpected process type: ${processType}`)
+            const toolName = this.job.toolName
+            if (!['script', 'mountainsort5', 'kilosort3'].includes(toolName)) {
+                throw Error(`Unexpected process type: ${toolName}`)
             }
             const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.job.jobId)
             fs.mkdirSync(jobDir, {recursive: true})
@@ -300,7 +300,7 @@ export class RunningJob {
             const files = await this._loadFiles(this.job.projectId)
 
             let scriptPyFileName = ''
-            if (processType === 'script') {
+            if (toolName === 'script') {
                 scriptPyFileName = (this.job.inputParameters.find(p => (p.name === 'script_file')) || {}).value
                 if (!scriptPyFileName) {
                     throw Error('Missing script_file parameter')
@@ -340,10 +340,10 @@ python3 ${scriptPyFileName}
 `
                 fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
             }
-            if (['mountainsort5', 'kilosort3'].includes(processType)) {
+            if (['mountainsort5', 'kilosort3'].includes(toolName)) {
                 let analysisRunPrefix = process.env.ANALYSIS_RUN_PREFIX || ''
                 if ((!analysisRunPrefix) && (presetConfig === 'flatiron')) {
-                    if (processType === 'kilosort3') {
+                    if (toolName === 'kilosort3') {
                         analysisRunPrefix = 'srun -p gpu --gpus-per-task 1 --gpus 1 -t 0-4:00'
                     }
                 }
@@ -367,10 +367,10 @@ python3 ${scriptPyFileName}
                     throw Error('Unexpected file content string: ' + cs)
                 }
                 const nwbUrl = cs.slice('url:'.length)
-                if (processType === 'mountainsort5') {
+                if (toolName === 'mountainsort5') {
                     runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
                 }
-                else if (processType === 'kilosort3') {
+                else if (toolName === 'kilosort3') {
                     runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
                 }
                 
@@ -411,7 +411,7 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
                 let args: string[]
 
                 let containerMethod = process.env.CONTAINER_METHOD || 'none'
-                if (processType !== 'script') {
+                if (toolName !== 'script') {
                     containerMethod = 'none'
                 }
 
@@ -425,7 +425,7 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
                         '--pwd', '/working',
                         '--bind', `${absJobDir}:/working`
                     ]
-                    if (processType === 'script') {
+                    if (toolName === 'script') {
                         args = [...args, ...[
                             // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
                             // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
@@ -450,7 +450,7 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
                         '-v', `${absJobDir}:/working`,
                         '-w', '/working'
                     ]
-                    if (processType === 'singularity') {
+                    if (toolName === 'singularity') {
                         const num_cpus = 2
                         const ram_gb = 2
                         args = [...args, ...[
@@ -487,7 +487,7 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
 
                 const timeoutId = setTimeout(() => {
                     if (returned) return
-                    console.info(`Killing job: ${this.job.jobId} - ${processType} due to timeout`)
+                    console.info(`Killing job: ${this.job.jobId} - ${toolName} due to timeout`)
                     returned = true
                     this.#childProcess.kill()
                     reject(Error('Timeout'))
@@ -528,7 +528,7 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
             
             await updateConsoleOutput()
 
-            if (processType === 'script') {
+            if (toolName === 'script') {
                 const outputFileNames: string[] = []
                 const files = fs.readdirSync(jobDir)
                 for (const file of files) {

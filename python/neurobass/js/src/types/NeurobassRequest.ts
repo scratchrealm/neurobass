@@ -660,7 +660,7 @@ export type CreateJobRequest = {
     timestamp: number
     workspaceId: string
     projectId: string
-    processType: string
+    toolName: string
     inputFiles: {
         name: string
         fileName: string
@@ -681,7 +681,7 @@ export const isCreateJobRequest = (x: any): x is CreateJobRequest => {
         timestamp: isNumber,
         workspaceId: isString,
         projectId: isString,
-        processType: isString,
+        toolName: isString,
         inputFiles: isArrayOf(y => (validateObject(y, {
             name: isString,
             fileName: isString

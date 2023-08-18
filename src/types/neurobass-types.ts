@@ -59,7 +59,7 @@ export type NBJob = {
     workspaceId: string
     jobId: string
     userId: string
-    processType: string
+    toolName: string
     inputFiles: {
         name: string
         fileId: string
@@ -95,7 +95,7 @@ export const isNBJob = (x: any): x is NBJob => {
         workspaceId: isString,
         jobId: isString,
         userId: isString,
-        processType: isString,
+        toolName: isString,
         inputFiles: isArrayOf(y => (validateObject(y, {
             name: isString,
             fileId: isString,

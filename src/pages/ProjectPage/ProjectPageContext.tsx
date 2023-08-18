@@ -245,7 +245,7 @@ export const SetupProjectPage: FunctionComponent<PropsWithChildren<Props>> = ({c
             return
         }
         const oo = {
-            processType: 'script',
+            toolName: 'script',
             inputFiles: [],
             inputParameters: [
                 {

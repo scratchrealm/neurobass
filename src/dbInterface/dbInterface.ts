@@ -378,7 +378,7 @@ export const createJob = async (
     workspaceId: string,
     projectId: string,
     o: {
-        processType: string,
+        toolName: string,
         inputFiles: {
             name: string
             fileName: string
@@ -399,7 +399,7 @@ export const createJob = async (
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
-        processType: o.processType,
+        toolName: o.toolName,
         inputFiles: o.inputFiles,
         inputParameters: o.inputParameters,
         outputFiles: o.outputFiles

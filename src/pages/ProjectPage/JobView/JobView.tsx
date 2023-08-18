@@ -61,8 +61,8 @@ const JobView: FunctionComponent<Props> = ({ width, height, jobId }) => {
                         <td><UserIdComponent userId={job.userId} /></td>
                     </tr>
                     <tr>
-                        <td>Process type:</td>
-                        <td>{job.processType}</td>
+                        <td>Tool name:</td>
+                        <td>{job.toolName}</td>
                     </tr>
                     <tr>
                         <td>Compute resource:</td>

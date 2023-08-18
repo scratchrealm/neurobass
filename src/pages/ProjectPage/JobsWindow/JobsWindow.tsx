@@ -17,7 +17,7 @@ const JobsWindow: FunctionComponent<Props> = ({ width, height, fileName, onCreat
     const filteredJobs = useMemo(() => {
         if (!jobs) return undefined
         if (fileName.endsWith('.py')) {
-            return jobs.filter(jj => (jj.processType === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName))))
+            return jobs.filter(jj => (jj.toolName === 'script' && jj.inputParameters.map(f => (f.value).includes(fileName))))
         }
         else if (fileName.endsWith('.nwb')) {
             return jobs.filter(jj => (jj.inputFiles.map(x => (x.fileName)).includes(fileName)))

@@ -1,19 +1,22 @@
 import { FunctionComponent, useCallback, useMemo, useState } from "react"
 import { createJob } from "../../../../dbInterface/dbInterface"
 import { useGithubAuth } from "../../../../GithubAuth/useGithubAuth"
+import { useWorkspace } from "../../../WorkspacePage/WorkspacePageContext"
 import { useProject } from "../../ProjectPageContext"
 
 type RunSpikeSortingWindowProps = {
     fileName: string
     onClose: () => void
+    spikeSortingToolName: string
 }
 
-type ProcessTypeOptions = 'mountainsort5' | 'kilosort3'
-
-const RunSpikeSortingWindow: FunctionComponent<RunSpikeSortingWindowProps> = ({fileName, onClose}) => {
-    const [processType, setProcessType] = useState<ProcessTypeOptions>('mountainsort5')
-
+const RunSpikeSortingWindow: FunctionComponent<RunSpikeSortingWindowProps> = ({fileName, onClose, spikeSortingToolName}) => {
     const {projectId, workspaceId} = useProject()
+    const {computeResourceSpec} = useWorkspace()
+
+    const spikeSortingTool = useMemo(() => {
+        return computeResourceSpec?.processing_tools.find(tool => (tool.name === spikeSortingToolName))
+    }, [computeResourceSpec, spikeSortingToolName])
 
     const [submitting, setSubmitting] = useState<boolean>(false)
 
@@ -24,7 +27,7 @@ const RunSpikeSortingWindow: FunctionComponent<RunSpikeSortingWindowProps> = ({f
         setSubmitting(true)
         try {
             await createJob(workspaceId, projectId, {
-                processType,
+                toolName: spikeSortingToolName,
                 inputFiles: [{
                     name: 'input',
                     fileName
@@ -40,7 +43,7 @@ const RunSpikeSortingWindow: FunctionComponent<RunSpikeSortingWindowProps> = ({f
         finally {
             setSubmitting(false)
         }
-    }, [workspaceId, projectId, fileName, processType, auth, onClose])
+    }, [workspaceId, projectId, fileName, spikeSortingToolName, auth, onClose])
 
     const submitEnabled = !submitting
 
@@ -48,11 +51,7 @@ const RunSpikeSortingWindow: FunctionComponent<RunSpikeSortingWindowProps> = ({f
         <div>
             <h3>Run spike sorting</h3>
             <div>
-                <label>Spike sorter:&nbsp;</label>
-                <select value={processType} onChange={e => setProcessType(e.target.value as ProcessTypeOptions)}>
-                    <option value="mountainsort5">MountainSort 5</option>
-                    <option value="kilosort3">Kilosort 3</option>
-                </select>
+                Spike sorter: {spikeSortingTool?.attributes.label || spikeSortingTool?.name}
             </div>
             <hr />
             <div>

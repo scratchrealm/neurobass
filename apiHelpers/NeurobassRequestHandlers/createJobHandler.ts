@@ -73,7 +73,7 @@ const createJobHandler = async (request: CreateJobRequest, o: {verifiedClientId?
         workspaceId,
         projectId: request.projectId,
         userId,
-        processType: request.processType,
+        toolName: request.toolName,
         inputFiles,
         inputFileIds: inputFiles.map(x => x.fileId),
         inputParameters: request.inputParameters,

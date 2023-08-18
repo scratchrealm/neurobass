@@ -5,7 +5,9 @@ import ModalWindow from "../../../components/ModalWindow/ModalWindow";
 import Splitter from "../../../components/Splitter";
 import { fetchFile } from "../../../dbInterface/dbInterface";
 import { useGithubAuth } from "../../../GithubAuth/useGithubAuth";
+import { getRemoteH5File, RemoteH5File } from "../../../RemoteH5File/RemoteH5File";
 import { NBFile } from "../../../types/neurobass-types";
+import { useWorkspace } from "../../WorkspacePage/WorkspacePageContext";
 import { AssetResponse } from "../DandiNwbSelector/types";
 import JobsWindow from "../JobsWindow/JobsWindow";
 import { useProject } from "../ProjectPageContext";
@@ -40,6 +42,43 @@ const NwbFileEditor: FunctionComponent<Props> = ({fileName, width, height}) => {
     )
 }
 
+const useNwbFile = (nwbUrl: string) => {
+    const [nwbFile, setNwbFile] = useState<RemoteH5File | undefined>(undefined)
+    useEffect(() => {
+        let canceled = false
+        ; (async () => {
+            const f = await getRemoteH5File(nwbUrl, undefined)
+            if (canceled) return
+            setNwbFile(f)
+        })()
+        return () => {canceled = true}
+    }, [nwbUrl])
+    return nwbFile
+}
+
+const useElectricalSeriesPaths = (nwbFile: RemoteH5File | undefined) => {
+    const [electricalSeriesPaths, setElectricalSeriesPaths] = useState<string[] | undefined>(undefined)
+    useEffect(() => {
+        let canceled = false
+        setElectricalSeriesPaths(undefined)
+        ; (async () => {
+            if (!nwbFile) return
+            const grp = await nwbFile.getGroup('acquisition')
+            if (canceled) return
+            if (!grp) return
+            const pp: string[] = []
+            for (const sg of grp.subgroups) {
+                if (sg.attrs['neurodata_type'] === 'ElectricalSeries') {
+                    pp.push(sg.path)
+                }
+            }
+            setElectricalSeriesPaths(pp)
+        })()
+        return () => {canceled = true}
+    }, [nwbFile])
+    return electricalSeriesPaths
+}
+
 const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height}) => {
     const [assetResponse, setAssetResponse] = useState<AssetResponse | null>(null)
 
@@ -62,7 +101,8 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
     const metadata = nbFile?.metadata
     const cc = nbFile?.content || ''
     const nwbUrl = cc.startsWith('url:') ? cc.slice('url:'.length) : ''
-
+    const nwbFile = useNwbFile(nwbUrl)
+    const electricalSeriesPaths = useElectricalSeriesPaths(nwbFile)
 
     const dandisetId = metadata?.dandisetId || ''
     const dandisetVersion = metadata?.dandisetVersion || ''
@@ -96,9 +136,7 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
     }
 
     const {visible: runSpikeSortingWindowVisible, handleOpen: openRunSpikeSortingWindow, handleClose: closeRunSpikeSortingWindow} = useModalDialog()
-    const handleRunSpikeSorting = useCallback(() => {
-        openRunSpikeSortingWindow()
-    }, [openRunSpikeSortingWindow])
+    const [selectedSpikeSortingTool, setSelectedSpikeSortingTool] = useState<string | undefined>(undefined)
 
     return (
         <div style={{position: 'absolute', width, height, background: 'white'}}>
@@ -138,10 +176,14 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
             }
             <div>&nbsp;</div>
             {
-                nwbUrl && (
-                    <div>
-                        <Hyperlink onClick={handleRunSpikeSorting}>Run spike sorting</Hyperlink>
-                    </div>
+                electricalSeriesPaths && (
+                    electricalSeriesPaths.length > 0 ? (
+                        <RunSpikeSortingComponent
+                            onSelect={(toolName) => {setSelectedSpikeSortingTool(toolName); openRunSpikeSortingWindow();}}
+                        />
+                    ) : (
+                        <div>No electrical series found</div>
+                    )       
                 )
             }
             <hr />
@@ -152,8 +194,36 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
                 <RunSpikeSortingWindow
                     onClose={closeRunSpikeSortingWindow}
                     fileName={fileName}
+                    spikeSortingToolName={selectedSpikeSortingTool}
                 />
             </ModalWindow>
+        </div>
+    )
+}
+
+type RunSpikeSortingComponentProps = {
+    onSelect?: (toolName: string) => void
+}
+
+const RunSpikeSortingComponent: FunctionComponent<RunSpikeSortingComponentProps> = ({onSelect}) => {
+    const {computeResourceSpec} = useWorkspace()
+    if (!computeResourceSpec) return <div>Loading compute resource spec...</div>
+    const spikeSorterTools = computeResourceSpec.processing_tools.filter(t => (t.tags || []).includes('spike_sorter'))
+    if (spikeSorterTools.length === 0) return <div>No spike sorter tools found</div>
+    return (
+        <div>
+            Run spike sorting using:
+            <ul>
+                {
+                    spikeSorterTools.map((tool, i) => (
+                        <li key={i}>
+                            <Hyperlink onClick={() => {onSelect && onSelect(tool.name)}}>
+                                {tool.attributes.label || tool.name}
+                            </Hyperlink>
+                        </li>
+                    ))
+                }
+            </ul>
         </div>
     )
 }

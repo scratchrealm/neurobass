@@ -49,6 +49,10 @@ class JobExecutor {
                 spec
             }
             const respSpec = await this._postNeurobassRequest(reqSpec)
+            if (!respSpec) {
+                console.warn(JSON.stringify(spec, null, 4))
+                throw Error('Unable to set compute resource spec')
+            }
             if (respSpec.type !== 'setComputeResourceSpec') {
                 console.warn(respSpec)
                 throw Error('Unexpected response type. Expected setComputeResourceSpec')

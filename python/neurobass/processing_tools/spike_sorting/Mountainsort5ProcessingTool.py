@@ -11,7 +11,16 @@ import spikeinterface.preprocessing as spre
 from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
 
-class Mountainsort5SortingParams(BaseModel):
+class Mountainsort5Model(BaseModel):
+    """
+    MountainSort is a CPU-based spike sorting software package developed by Jeremy Magland and others at Flatiron Institute in collaboration with researchers at Loren Frank's lab.
+    By employing Isosplit, a non-parametric density-based clustering approach, the software minimizes the need for manual intervention, thereby reducing errors and inconsistencies.
+    See https://github.com/flatironinstitute/mountainsort5 and https://doi.org/10.1016/j.neuron.2017.08.030
+    """
+    input: InputFile = Field(..., description="Input NWB file")
+    output: OutputFile = Field(..., description="Output NWB file")
+    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
+    
     scheme: str = Field("2", description="Which sorting scheme to use: '1, '2', or '3'")
     detect_threshold: float = Field(5.5, description="Detection threshold - recommend to use the default")
     detect_sign: int = Field(-1, description="Use -1 for detecting negative peaks, 1 for positive, 0 for both")
@@ -32,17 +41,6 @@ class Mountainsort5SortingParams(BaseModel):
     freq_max: int = Field(6000, description="Low-pass filter cutoff frequency")
     filter: bool = Field(True, description="Enable or disable filter")
     whiten: bool = Field(True, description="Enable or disable whitening - Important to do whitening")
-
-class Mountainsort5Model(BaseModel):
-    """
-    MountainSort is a CPU-based spike sorting software package developed by Jeremy Magland and others at Flatiron Institute in collaboration with researchers at Loren Frank's lab.
-    By employing Isosplit, a non-parametric density-based clustering approach, the software minimizes the need for manual intervention, thereby reducing errors and inconsistencies.
-    See https://github.com/flatironinstitute/mountainsort5 and https://doi.org/10.1016/j.neuron.2017.08.030
-    """
-    input: InputFile = Field(..., description="Input NWB file")
-    output: OutputFile = Field(..., description="Output NWB file")
-    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
-    sorting_params: Mountainsort5SortingParams = Field(..., description="Sorting parameters")
 
 class Mountainsort5ProcessingTool(NeurobassProcessingTool):
     @classmethod
@@ -100,7 +98,7 @@ def _run(context: NeurobassProcessingToolContext):
     else:
         recording_preprocessed = recording_filtered
 
-    sp = data.sorting_params
+    sp = data
     scheme1_sorting_parameters = ms5.Scheme1SortingParameters(
         detect_threshold=sp.detect_threshold,
         detect_channel_radius=sp.scheme1_detect_channel_radius,
@@ -136,13 +134,13 @@ def _run(context: NeurobassProcessingToolContext):
         block_sorting_parameters=scheme2_sorting_parameters, block_duration_sec=sp.scheme3_block_duration_sec
     )
 
-    scheme = p["scheme"]
+    scheme = sp.scheme
     if scheme == "1":
-        sorting = ms5.sorting_scheme1(recording=recording, sorting_parameters=scheme1_sorting_parameters)
+        sorting = ms5.sorting_scheme1(recording=recording_preprocessed, sorting_parameters=scheme1_sorting_parameters)
     elif p["scheme"] == "2":
-        sorting = ms5.sorting_scheme2(recording=recording, sorting_parameters=scheme2_sorting_parameters)
+        sorting = ms5.sorting_scheme2(recording=recording_preprocessed, sorting_parameters=scheme2_sorting_parameters)
     elif p["scheme"] == "3":
-        sorting = ms5.sorting_scheme3(recording=recording, sorting_parameters=scheme3_sorting_parameters)
+        sorting = ms5.sorting_scheme3(recording=recording_preprocessed, sorting_parameters=scheme3_sorting_parameters)
 
     with pynwb.NWBHDF5IO(file=h5py.File(remf, 'r'), mode='r') as io:
         nwbfile_rec = io.read()

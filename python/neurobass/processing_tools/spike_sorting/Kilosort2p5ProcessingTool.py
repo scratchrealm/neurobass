@@ -10,9 +10,19 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
+    
 
-
-class Kilosort2p5SortingParams(BaseModel):
+class Kilosort2p5Model(BaseModel):
+    """Kilosort2.5 is a spike sorting software package developed by Marius Pachitariu at Janelia Research Campus.
+It uses a GPU-accelerated algorithm to detect, align, and cluster spikes across many channels.
+Kilosort2.5 improves on Kilosort2 primarily in the type of drift correction used.
+This tool has become an essential part of the workflow many electrophysiology labs.
+For more information see https://github.com/MouseLand/Kilosort
+    """
+    input: InputFile = Field(..., description="Input NWB file")
+    output: OutputFile = Field(..., description="Output NWB file")
+    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
+    
     detect_threshold: float = Field(6, description="Threshold for spike detection")
     projection_threshold: List[float] = Field([10, 4], description="Threshold on projections")
     preclust_threshold: float = Field(8, description="Threshold crossings for pre-clustering (in PCA projection space)")
@@ -33,20 +43,6 @@ class Kilosort2p5SortingParams(BaseModel):
     wave_length: int = Field(61, description="size of the waveform extracted around each detected peak, (Default 61, maximum 81)")
     skip_kilosort_preprocessing: bool = Field(False, description="Can optionaly skip the internal kilosort preprocessing")
     scaleproc: int = Field(None, description="int16 scaling of whitened data, if None set to 200.")
-
-    
-
-class Kilosort2p5Model(BaseModel):
-    """Kilosort2.5 is a spike sorting software package developed by Marius Pachitariu at Janelia Research Campus.
-It uses a GPU-accelerated algorithm to detect, align, and cluster spikes across many channels.
-Kilosort2.5 improves on Kilosort2 primarily in the type of drift correction used.
-This tool has become an essential part of the workflow many electrophysiology labs.
-For more information see https://github.com/MouseLand/Kilosort
-    """
-    input: InputFile = Field(..., description="Input NWB file")
-    output: OutputFile = Field(..., description="Output NWB file")
-    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
-    sorting_params: Kilosort2p5SortingParams = Field(..., description="Sorting parameters")
 
 class Kilosort2p5ProcessingTool(NeurobassProcessingTool):
     @classmethod

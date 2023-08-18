@@ -374,24 +374,26 @@ export const deleteComputeResource = async (computeResourceId: string, auth: Aut
     }
 }
 
+export type NBProcessingJobDefinition = {
+    toolName: string,
+    inputFiles: {
+        name: string
+        fileName: string
+    }[],
+    inputParameters: {
+        name: string
+        value: any
+    }[],
+    outputFiles: {
+        name: string
+        fileName: string
+    }[]
+}
+
 export const createJob = async (
     workspaceId: string,
     projectId: string,
-    o: {
-        toolName: string,
-        inputFiles: {
-            name: string
-            fileName: string
-        }[],
-        inputParameters: {
-            name: string
-            value: any
-        }[],
-        outputFiles: {
-            name: string
-            fileName: string
-        }[]
-    },
+    jobDef: NBProcessingJobDefinition,
     auth: Auth)
 : Promise<string> => {
     const req: CreateJobRequest = {
@@ -399,10 +401,10 @@ export const createJob = async (
         timestamp: Date.now() / 1000,
         workspaceId,
         projectId,
-        toolName: o.toolName,
-        inputFiles: o.inputFiles,
-        inputParameters: o.inputParameters,
-        outputFiles: o.outputFiles
+        toolName: jobDef.toolName,
+        inputFiles: jobDef.inputFiles,
+        inputParameters: jobDef.inputParameters,
+        outputFiles: jobDef.outputFiles
     }
     const resp = await postNeurobassRequest(req, {...auth})
     if (resp.type !== 'createJob') {

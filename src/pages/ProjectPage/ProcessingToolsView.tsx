@@ -71,15 +71,23 @@ type ProcessingToolParametersViewProps = {
     schema: ProcessingToolSchema
 }
 
+export type ProcessingToolSchemaParameter = {
+    name: string
+    description: string
+    default: any
+    type: string
+    children?: ProcessingToolSchemaParameter[]
+}
+
 export class ProcessingToolSchemaParser {
     #inputs: {name: string, description: string}[] = []
     #outputs: {name: string, description: string}[] = []
-    #parameters: {name: string, description: string}[] = []
+    #parameters: ProcessingToolSchemaParameter[] = []
     constructor(private schema: ProcessingToolSchema) {
         for (const k in schema.properties) {
             const p = schema.properties[k]
             if (p.type) {
-                this.#parameters.push({name: k, description: p.description || ''})
+                this.#parameters.push({name: k, description: p.description || '', type: p.type, default: p.default})
             }
             else if (p.allOf) {
                 if (p.allOf[0]['$ref'] === '#/definitions/InputFile') {
@@ -89,7 +97,7 @@ export class ProcessingToolSchemaParser {
                     this.#outputs.push({name: k, description: p.description || ''})
                 }
                 else {
-                    this.#parameters.push({name: k, description: p.description || ''})
+                    this.#parameters.push({name: k, description: p.description || '', default: p.default, type: 'unknown'})
                 }
             }
         }

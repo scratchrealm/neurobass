@@ -12,7 +12,18 @@ from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
 
 
-class Kilosort3SortingParams(BaseModel):
+class Kilosort3Model(BaseModel):
+    """Kilosort3 is a spike sorting software package developed by Marius Pachitariu at Janelia Research Campus.
+It uses a GPU-accelerated algorithm to detect, align, and cluster spikes across many channels.
+Building on previous versions, Kilosort3 offers improved efficiency and accuracy in the extraction of neural spike waveforms from multichannel electrophysiological recordings.
+By leveraging parallel processing capabilities of modern GPUs, it enables sorting with minimal manual intervention.
+This tool has become an essential part of the workflow many electrophysiology labs.
+For more information see https://github.com/MouseLand/Kilosort
+    """
+    input: InputFile = Field(..., description="Input NWB file")
+    output: OutputFile = Field(..., description="Output NWB file")
+    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
+    
     detect_threshold: float = Field(6, description="Threshold for spike detection")
     projection_threshold: List[float] = Field([9, 9], description="Threshold on projections")
     preclust_threshold: float = Field(8, description="Threshold crossings for pre-clustering (in PCA projection space)")
@@ -33,19 +44,6 @@ class Kilosort3SortingParams(BaseModel):
     keep_good_only: bool = Field(False, description="If True only 'good' units are returned")
     skip_kilosort_preprocessing: bool = Field(False, description="Can optionaly skip the internal kilosort preprocessing")
     scaleproc: int = Field(None, description="int16 scaling of whitened data, if None set to 200.")
-
-class Kilosort3Model(BaseModel):
-    """Kilosort3 is a spike sorting software package developed by Marius Pachitariu at Janelia Research Campus.
-It uses a GPU-accelerated algorithm to detect, align, and cluster spikes across many channels.
-Building on previous versions, Kilosort3 offers improved efficiency and accuracy in the extraction of neural spike waveforms from multichannel electrophysiological recordings.
-By leveraging parallel processing capabilities of modern GPUs, it enables sorting with minimal manual intervention.
-This tool has become an essential part of the workflow many electrophysiology labs.
-For more information see https://github.com/MouseLand/Kilosort
-    """
-    input: InputFile = Field(..., description="Input NWB file")
-    output: OutputFile = Field(..., description="Output NWB file")
-    electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
-    sorting_params: Kilosort3SortingParams = Field(..., description="Sorting parameters")
 
 class Kilosort3ProcessingTool(NeurobassProcessingTool):
     @classmethod

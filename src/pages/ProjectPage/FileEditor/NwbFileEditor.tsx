@@ -56,7 +56,7 @@ const useNwbFile = (nwbUrl: string) => {
     return nwbFile
 }
 
-const useElectricalSeriesPaths = (nwbFile: RemoteH5File | undefined) => {
+export const useElectricalSeriesPaths = (nwbFile: RemoteH5File | undefined) => {
     const [electricalSeriesPaths, setElectricalSeriesPaths] = useState<string[] | undefined>(undefined)
     useEffect(() => {
         let canceled = false
@@ -195,6 +195,7 @@ const NwbFileEditorChild: FunctionComponent<Props> = ({fileName, width, height})
                     onClose={closeRunSpikeSortingWindow}
                     fileName={fileName}
                     spikeSortingToolName={selectedSpikeSortingTool}
+                    nwbFile={nwbFile}
                 />
             </ModalWindow>
         </div>

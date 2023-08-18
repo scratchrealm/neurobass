@@ -68,7 +68,7 @@ export type NBJob = {
     inputFileIds: string[]
     inputParameters: {
         name: string
-        value: any
+        value?: any
     }[]
     outputFiles: {
         name: string
@@ -104,7 +104,7 @@ export const isNBJob = (x: any): x is NBJob => {
         inputFileIds: isArrayOf(isString),
         inputParameters: isArrayOf(y => (validateObject(y, {
             name: isString,
-            value: isString
+            value: optional(() => true)
         }))),
         outputFiles: isArrayOf(y => (validateObject(y, {
             name: isString,
@@ -199,6 +199,7 @@ export type ProcessingToolSchema = {
             title: string
             description?: string
             type?: string
+            default?: any
             allOf?: {
                 $ref: string
             }[]

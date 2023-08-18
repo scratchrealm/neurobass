@@ -1,4 +1,4 @@
-import { CreateProjectRequest, CreateJobRequest, CreateWorkspaceRequest, DeleteFileRequest, DeleteProjectRequest, DeleteComputeResourceRequest, DeleteJobRequest, DeleteWorkspaceRequest, GetProjectsRequest, GetFileRequest, GetFilesRequest, GetProjectRequest, GetComputeResourcesRequest, GetDataBlobRequest, GetJobRequest, GetJobsRequest, GetWorkspaceRequest, GetWorkspacesRequest, RegisterComputeResourceRequest, SetFileRequest, SetProjectPropertyRequest, SetWorkspacePropertyRequest, SetWorkspaceUsersRequest, DuplicateFileRequest, RenameFileRequest, GetComputeResourceRequest } from "../types/NeurobassRequest";
+import { CreateProjectRequest, CreateJobRequest, CreateWorkspaceRequest, DeleteFileRequest, DeleteProjectRequest, DeleteComputeResourceRequest, DeleteJobRequest, DeleteWorkspaceRequest, GetProjectsRequest, GetFileRequest, GetFilesRequest, GetProjectRequest, GetComputeResourcesRequest, GetDataBlobRequest, GetJobRequest, GetJobsRequest, GetWorkspaceRequest, GetWorkspacesRequest, RegisterComputeResourceRequest, SetFileRequest, SetProjectPropertyRequest, SetWorkspacePropertyRequest, SetWorkspaceUsersRequest, DuplicateFileRequest, RenameFileRequest, GetComputeResourceRequest, GetComputeResourceSpecRequest } from "../types/NeurobassRequest";
 import { NBProject, NBFile, NBComputeResource, NBJob, NBWorkspace } from "../types/neurobass-types";
 import postNeurobassRequest from "./postNeurobassRequest";
 
@@ -464,4 +464,17 @@ export const fetchJob = async (workspaceId: string, projectId: string, jobId: st
         throw Error(`Unexpected response type ${resp.type}. Expected getJob.`)
     }
     return resp.job
+}
+
+export const getComputeResourceSpec = async (computeResourceId: string): Promise<any> => {
+    const req: GetComputeResourceSpecRequest = {
+        type: 'getComputeResourceSpec',
+        timestamp: Date.now() / 1000,
+        computeResourceId
+    }
+    const resp = await postNeurobassRequest(req, {})
+    if (resp.type !== 'getComputeResourceSpec') {
+        throw Error(`Unexpected response type ${resp.type}. Expected getComputeResource.`)
+    }
+    return resp.spec
 }

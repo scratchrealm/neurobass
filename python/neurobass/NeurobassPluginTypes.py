@@ -62,6 +62,16 @@ class NeurobassProcessingTool(ABC):
             str: the name of the processing tool
         """
         return ''
+    
+    @classmethod
+    @abstractmethod
+    def get_attributes(cls) -> dict:
+        """Get the attributes of the processing tool
+
+        Returns:
+            dict: the attributes of the processing tool
+        """
+        return {}
 
     @classmethod
     @abstractmethod

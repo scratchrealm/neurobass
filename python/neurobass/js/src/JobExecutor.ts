@@ -1,7 +1,8 @@
+import fs from 'fs'
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource"
 import PubsubClient from './PubsubClient'
 import JobManager from "./JobManager"
-import { GetPubsubSubscriptionRequest, GetJobsRequest } from "./types/NeurobassRequest"
+import { GetPubsubSubscriptionRequest, GetJobsRequest, SetComputeResourceSpecRequest } from "./types/NeurobassRequest"
 
 class JobExecutor {
     #stopped = false
@@ -37,6 +38,22 @@ class JobExecutor {
     }maxNumConcurrentSpaJobs
     async start() {
         console.info('Starting job executor.')
+
+        const specJsonFname = `${this.a.dir}/spec.json`
+        if (fs.existsSync(specJsonFname)) {
+            const spec = JSON.parse(fs.readFileSync(specJsonFname, 'utf8'))
+            const reqSpec: SetComputeResourceSpecRequest = {
+                type: 'setComputeResourceSpec',
+                timestamp: Date.now() / 1000,
+                computeResourceId: process.env.COMPUTE_RESOURCE_ID,
+                spec
+            }
+            const respSpec = await this._postNeurobassRequest(reqSpec)
+            if (respSpec.type !== 'setComputeResourceSpec') {
+                console.warn(respSpec)
+                throw Error('Unexpected response type. Expected setComputeResourceSpec')
+            }
+        }
 
         const reqPubsub: GetPubsubSubscriptionRequest = {
             type: 'getPubsubSubscription',

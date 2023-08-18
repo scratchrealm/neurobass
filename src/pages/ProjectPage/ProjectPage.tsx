@@ -6,6 +6,7 @@ import useRoute from "../../useRoute";
 import { SetupWorkspacePage } from "../WorkspacePage/WorkspacePageContext";
 import DandiNwbSelector from "./DandiNwbSelector/DandiNwbSelector";
 import ManualNwbSelector from "./ManualNwbSelector/ManualNwbSelector";
+import ProcessingToolsView from "./ProcessingToolsView";
 import ProjectFiles from "./ProjectFiles";
 import ProjectHome from "./ProjectHome";
 import ProjectJobs from "./ProjectJobs";
@@ -193,6 +194,12 @@ const MainPanel: FunctionComponent<MainPanelProps> = ({width, height}) => {
                     width={width}
                     height={height}
                     onNwbFileSelected={handleImportManualNwbFile}
+                />
+            </div>
+            <div style={{position: 'absolute', width, height, visibility: currentView === 'processing-tools' ? undefined : 'hidden'}}>
+                <ProcessingToolsView
+                    width={width}
+                    height={height}
                 />
             </div>
         </div>

@@ -36,14 +36,13 @@ class Daemon:
         sys.exit(0)
 
     def start(self):
+        # Write spec.json
         from .NeurobassPluginTypes import NeurobassPlugin, NeurobassPluginContext, NeurobassProcessingTool
-
         class NeurobassPluginContextImpl(NeurobassPluginContext):
             def __init__(self):
                 self._processing_tools: list[NeurobassProcessingTool] = []
             def register_processing_tool(self, tool: NeurobassPlugin):
                 self._processing_tools.append(tool)
-
         plugin_context = NeurobassPluginContextImpl()
         plugin_package_names = ['neurobass']
         for plugin_package_name in plugin_package_names:
@@ -56,6 +55,7 @@ class Daemon:
             'processing_tools': [
                 {
                     'name': pt.get_name(),
+                    'attributes': pt.get_attributes(),
                     'schema': pt.get_schema()
                 }
                 for pt in plugin_context._processing_tools

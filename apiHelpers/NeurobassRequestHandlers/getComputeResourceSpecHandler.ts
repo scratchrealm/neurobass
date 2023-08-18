@@ -18,7 +18,6 @@ const getComputeResourceSpecHandler = async (request: GetComputeResourceSpecRequ
         console.warn(doc.spec)
         throw Error('Invalid compute resource spec in database (1)')
     }
-
     return {
         type: 'getComputeResourceSpec',
         spec: doc.spec

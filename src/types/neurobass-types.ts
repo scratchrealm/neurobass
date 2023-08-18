@@ -224,6 +224,7 @@ export const isProcessingToolSchema = (x: any): x is ProcessingToolSchema => {
 export type ComputeResourceSpec = {
     processing_tools: {
         name: string
+        attributes: any
         schema: ProcessingToolSchema
     }[]
 }
@@ -232,6 +233,7 @@ export const isComputeResourceSpec = (x: any): x is ComputeResourceSpec => {
     return validateObject(x, {
         processing_tools: isArrayOf(y => (validateObject(y, {
             name: isString,
+            attributes: () => true,
             schema: isProcessingToolSchema
         })))
     })

@@ -1001,7 +1001,8 @@ export type NeurobassRequestPayload =
     GetActiveComputeResourceNodesRequest |
     SetJobPropertyRequest |
     GetPubsubSubscriptionRequest |
-    SetComputeResourceSpecRequest
+    SetComputeResourceSpecRequest |
+    GetComputeResourceSpecRequest
 
 export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload => {
     return isOneOf([
@@ -1034,7 +1035,8 @@ export const isNeurobassRequestPayload = (x: any): x is NeurobassRequestPayload 
         isGetActiveComputeResourceNodesRequest,
         isSetJobPropertyRequest,
         isGetPubsubSubscriptionRequest,
-        isSetComputeResourceSpecRequest
+        isSetComputeResourceSpecRequest,
+        isGetComputeResourceSpecRequest
     ])(x)
 }
 
@@ -1090,7 +1092,8 @@ export type NeurobassResponse =
     GetActiveComputeResourceNodesResponse |
     SetJobPropertyResponse |
     GetPubsubSubscriptionResponse |
-    SetComputeResourceSpecResponse
+    SetComputeResourceSpecResponse |
+    GetComputeResourceSpecResponse
 
 export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
     return isOneOf([
@@ -1123,6 +1126,7 @@ export const isNeurobassResponse = (x: any): x is NeurobassResponse => {
         isGetActiveComputeResourceNodesResponse,
         isSetJobPropertyResponse,
         isGetPubsubSubscriptionResponse,
-        isSetComputeResourceSpecResponse
+        isSetComputeResourceSpecResponse,
+        isGetComputeResourceSpecResponse
     ])(x)
 }

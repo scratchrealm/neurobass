@@ -7,3 +7,4 @@ from .NeurobassPluginTypes import NeurobassProcessingToolContext, NeurobassProce
 
 # neurobass processing plugins
 from .processing_tools.spike_sorting.SpikeSortingPlugin import SpikeSortingPlugin
+from .processing_tools.calcium_imaging.CalciumImagingPlugin import CalciumImagingPlugin

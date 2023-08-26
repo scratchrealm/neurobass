@@ -57,26 +57,18 @@ const EditJobDefinitionWindow: FunctionComponent<EditJobDefinitionWindowProps> =
                 />
             )
         })
-        const handleParam = (parameter: ProcessingToolSchemaParameter) => {
+        pt.parameters.forEach(parameter => {
             ret.push(
                 <ParameterRow
                     key={parameter.name}
-                    name={parameter.name}
-                    description={parameter.description}
+                    parameter={parameter}
                     value={jobDefinition?.inputParameters.find(f => (f.name === parameter.name))?.value}
                     nwbFile={nwbFile}
                     setValue={value => {
                         setParameterValue(parameter.name, value)
                     }}
-                    type={parameter.type}
                 />
             )
-            if (parameter.children) parameter.children.forEach(child => {
-                handleParam(child)
-            })
-        }
-        pt.parameters.forEach(parameter => {
-            handleParam(parameter)
         })
         return ret
     }, [pt, jobDefinition, nwbFile, setParameterValue])
@@ -124,25 +116,23 @@ const OutputRow: FunctionComponent<OutputRowProps> = ({name, description, value}
 }
 
 type ParameterRowProps = {
-    name: string
-    type: string
-    description: string
+    parameter: ProcessingToolSchemaParameter
     value?: string
     nwbFile?: RemoteH5File
     setValue: (value: any) => void
 }
 
-const ParameterRow: FunctionComponent<ParameterRowProps> = ({name, description, value, nwbFile, setValue, type}) => {
+const ParameterRow: FunctionComponent<ParameterRowProps> = ({parameter, value, nwbFile, setValue}) => {
+    const {type, name, description} = parameter
     return (
         <tr>
             <td title={`${name} (${type})`}>{name}</td>
             <td>
                 <EditParameterValue
-                    name={name}
+                    parameter={parameter}
                     value={value}
                     nwbFile={nwbFile}
                     setValue={setValue}
-                    type={type}
                 />
             </td>
             <td>{description}</td>
@@ -151,14 +141,14 @@ const ParameterRow: FunctionComponent<ParameterRowProps> = ({name, description, 
 }
 
 type EditParameterValueProps = {
-    name: string
+    parameter: ProcessingToolSchemaParameter
     value?: string
     nwbFile?: RemoteH5File
     setValue: (value: any) => void
-    type: string
 }
 
-const EditParameterValue: FunctionComponent<EditParameterValueProps> = ({name, value, nwbFile, setValue, type}) => {
+const EditParameterValue: FunctionComponent<EditParameterValueProps> = ({parameter, value, nwbFile, setValue}) => {
+    const {type, name} = parameter
     if (name === 'electrical_series_path') {
         return <ElectricalSeriesPathSelector value={value} nwbFile={nwbFile} setValue={setValue} />
     }
@@ -173,6 +163,18 @@ const EditParameterValue: FunctionComponent<EditParameterValueProps> = ({name, v
     }
     else if (type === 'boolean') {
         return <input type="checkbox" checked={value === 'true'} onChange={evt => {setValue(evt.target.checked ? 'true' : 'false')}} />
+    }
+    else if (type === 'Enum') {
+        const choices = parameter.choices || []
+        return (
+            <select value={value} onChange={evt => {setValue(evt.target.value)}}>
+                {
+                    choices.map(choice => (
+                        <option key={choice} value={choice}>{choice}</option>
+                    ))
+                }
+            </select>
+        )
     }
     else {
         return <div>Unsupported type: {type}</div>

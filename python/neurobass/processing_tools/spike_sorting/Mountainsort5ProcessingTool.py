@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import List
 import os
 import json
@@ -11,6 +12,13 @@ import spikeinterface.preprocessing as spre
 from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
 
+class SchemeEnum(str, Enum):
+    scheme1 = '1'
+    scheme2 = '2'
+    scheme3 = '3'
+
+sorting_params_group = 'sorting_params'
+
 class Mountainsort5Model(BaseModel):
     """
     MountainSort is a CPU-based spike sorting software package developed by Jeremy Magland and others at Flatiron Institute in collaboration with researchers at Loren Frank's lab.
@@ -21,26 +29,26 @@ class Mountainsort5Model(BaseModel):
     output: OutputFile = Field(..., description="Output NWB file")
     electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
     
-    scheme: str = Field("2", description="Which sorting scheme to use: '1, '2', or '3'")
-    detect_threshold: float = Field(5.5, description="Detection threshold - recommend to use the default")
-    detect_sign: int = Field(-1, description="Use -1 for detecting negative peaks, 1 for positive, 0 for both")
-    detect_time_radius_msec: float = Field(0.5, description="Determines the minimum allowable time interval between detected spikes in the same spatial region")
-    snippet_T1: int = Field(20, description="Number of samples before the peak to include in the snippet")
-    snippet_T2: int = Field(20, description="Number of samples after the peak to include in the snippet")
-    npca_per_channel: int = Field(3, description="Number of PCA features per channel in the initial dimension reduction step")
-    npca_per_subdivision: int = Field(10, description="Number of PCA features to compute at each stage of clustering in the isosplit6 subdivision method")
-    snippet_mask_radius: int = Field(250, description="Radius of the mask to apply to the extracted snippets")
-    scheme1_detect_channel_radius: int = Field(150, description="Channel radius for excluding events that are too close in time in scheme 1")
-    scheme2_phase1_detect_channel_radius: int = Field(200, description="Channel radius for excluding events that are too close in time during phase 1 of scheme 2")
-    scheme2_detect_channel_radius: int = Field(50, description="Channel radius for excluding events that are too close in time during phase 2 of scheme 2")
-    scheme2_max_num_snippets_per_training_batch: int = Field(200, description="Maximum number of snippets to use in each batch for training during phase 2 of scheme 2")
-    scheme2_training_duration_sec: int = Field(60 * 5, description="Duration of training data to use in scheme 2")
-    scheme2_training_recording_sampling_mode: str = Field("uniform", description="initial or uniform")
-    scheme3_block_duration_sec: int = Field(60 * 30, description="Duration of each block in scheme 3")
-    freq_min: int = Field(300, description="High-pass filter cutoff frequency")
-    freq_max: int = Field(6000, description="Low-pass filter cutoff frequency")
-    filter: bool = Field(True, description="Enable or disable filter")
-    whiten: bool = Field(True, description="Enable or disable whitening - Important to do whitening")
+    scheme: SchemeEnum = Field("2", description="Which sorting scheme to use: '1, '2', or '3'", group=sorting_params_group)
+    detect_threshold: float = Field(5.5, le=100, description="Detection threshold - recommend to use the default", group=sorting_params_group)
+    detect_sign: int = Field(-1, description="Use -1 for detecting negative peaks, 1 for positive, 0 for both", group=sorting_params_group)
+    detect_time_radius_msec: float = Field(0.5, description="Determines the minimum allowable time interval between detected spikes in the same spatial region", group=sorting_params_group)
+    snippet_T1: int = Field(20, description="Number of samples before the peak to include in the snippet", group=sorting_params_group)
+    snippet_T2: int = Field(20, description="Number of samples after the peak to include in the snippet", group=sorting_params_group)
+    npca_per_channel: int = Field(3, description="Number of PCA features per channel in the initial dimension reduction step", group=sorting_params_group)
+    npca_per_subdivision: int = Field(10, description="Number of PCA features to compute at each stage of clustering in the isosplit6 subdivision method", group=sorting_params_group)
+    snippet_mask_radius: int = Field(250, description="Radius of the mask to apply to the extracted snippets", group=sorting_params_group)
+    scheme1_detect_channel_radius: int = Field(150, description="Channel radius for excluding events that are too close in time in scheme 1", group=sorting_params_group)
+    scheme2_phase1_detect_channel_radius: int = Field(200, description="Channel radius for excluding events that are too close in time during phase 1 of scheme 2", group=sorting_params_group)
+    scheme2_detect_channel_radius: int = Field(50, description="Channel radius for excluding events that are too close in time during phase 2 of scheme 2", group=sorting_params_group)
+    scheme2_max_num_snippets_per_training_batch: int = Field(200, description="Maximum number of snippets to use in each batch for training during phase 2 of scheme 2", group=sorting_params_group)
+    scheme2_training_duration_sec: int = Field(60 * 5, description="Duration of training data to use in scheme 2", group=sorting_params_group)
+    scheme2_training_recording_sampling_mode: str = Field("uniform", description="initial or uniform", group=sorting_params_group)
+    scheme3_block_duration_sec: int = Field(60 * 30, description="Duration of each block in scheme 3", group=sorting_params_group)
+    freq_min: int = Field(300, description="High-pass filter cutoff frequency", group=sorting_params_group)
+    freq_max: int = Field(6000, description="Low-pass filter cutoff frequency", group=sorting_params_group)
+    filter: bool = Field(True, description="Enable or disable filter", group=sorting_params_group)
+    whiten: bool = Field(True, description="Enable or disable whitening - Important to do whitening", group=sorting_params_group)
 
 class Mountainsort5ProcessingTool(NeurobassProcessingTool):
     @classmethod
@@ -57,8 +65,8 @@ class Mountainsort5ProcessingTool(NeurobassProcessingTool):
     def get_tags(cls) -> List[str]:
         return ['spike_sorting', 'spike_sorter']
     @classmethod
-    def get_schema(cls) -> dict:
-        return json.loads(Mountainsort5Model.schema_json())
+    def get_model(cls) -> BaseModel:
+        return Mountainsort5Model
     @classmethod
     def run(cls, context: NeurobassProcessingToolContext):
         _run(context)

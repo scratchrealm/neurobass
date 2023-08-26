@@ -1,4 +1,5 @@
-from typing import Any
+from enum import Enum
+from typing import Any, List
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
@@ -85,11 +86,11 @@ class NeurobassProcessingTool(ABC):
 
     @classmethod
     @abstractmethod
-    def get_schema(cls) -> dict:
-        """Get the pydantic schema for the processing tool, including inputs and outputs
+    def get_model(cls) -> BaseModel:
+        """Get the pydantic model for the processing tool, including inputs and outputs
 
         Returns:
-            dict: the pydantic schema for the processing tool
+            BaseModel: the pydantic model for the processing tool
         """
         return {}
 
@@ -97,6 +98,47 @@ class NeurobassProcessingTool(ABC):
     @abstractmethod
     def run(cls, context: NeurobassProcessingToolContext):
         pass
+
+    @classmethod
+    def get_schema(cls) -> dict:
+        ret = {
+            'properties': []
+        }
+        if cls.__doc__ is not None:
+            ret['description'] = cls.__doc__
+        model = cls.get_model()
+        for name, field in model.__annotations__.items():
+            ff = model.__fields__[name]
+            field_default = ff.default
+            field_schema = ff.field_info
+            field_type = ff.type_
+        
+            kwargs = {}
+            extra = getattr(field_schema, 'extra', {})
+            valid_extra_keys = ['group']
+            for k in valid_extra_keys:
+                if k in extra:
+                    kwargs[k] = extra[k]
+            if issubclass(field_type, InputFile):
+                field_type_str = 'InputFile'
+            elif issubclass(field_type, OutputFile):
+                field_type_str = 'OutputFile'
+            elif issubclass(field_type, Enum):
+                field_type_str = 'Enum'
+                kwargs['choices'] = [x.value for x in field]
+            else:
+                if ff.outer_type_ == List[float]:
+                    field_type_str = 'List[float]'
+                else:
+                    field_type_str = field_type.__name__
+            ret['properties'].append({
+                'name': name,
+                'type': field_type_str,
+                'description': field_schema.description,
+                'default': field_default,
+                **kwargs
+            })
+        return ret
 
 class NeurobassPluginContext(ABC):
     """The plugin context to be passed into the initialize method of the plugin

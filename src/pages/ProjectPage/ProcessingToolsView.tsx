@@ -73,10 +73,11 @@ type ProcessingToolParametersViewProps = {
 
 export type ProcessingToolSchemaParameter = {
     name: string
-    description: string
-    default: any
     type: string
-    children?: ProcessingToolSchemaParameter[]
+    description?: string
+    default?: any
+    group?: string
+    choices?: (string | number)[]
 }
 
 export class ProcessingToolSchemaParser {
@@ -86,19 +87,14 @@ export class ProcessingToolSchemaParser {
     constructor(private schema: ProcessingToolSchema) {
         for (const k in schema.properties) {
             const p = schema.properties[k]
-            if (p.type) {
-                this.#parameters.push({name: k, description: p.description || '', type: p.type, default: p.default})
+            if (p.type === 'InputFile') {
+                this.#inputs.push({name: k, description: p.description || ''})
             }
-            else if (p.allOf) {
-                if (p.allOf[0]['$ref'] === '#/definitions/InputFile') {
-                    this.#inputs.push({name: k, description: p.description || ''})
-                }
-                else if (p.allOf[0]['$ref'] === '#/definitions/OutputFile') {
-                    this.#outputs.push({name: k, description: p.description || ''})
-                }
-                else {
-                    this.#parameters.push({name: k, description: p.description || '', default: p.default, type: 'unknown'})
-                }
+            else if (p.type === 'OutputFile') {
+                this.#outputs.push({name: k, description: p.description || ''})
+            }
+            else {
+                this.#parameters.push({name: k, description: p.description || '', type: p.type, default: p.default, group: p.group, choices: p.choices})
             }
         }
     }

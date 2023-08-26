@@ -191,38 +191,36 @@ export const isNBComputeResource = (x: any): x is NBComputeResource => {
 }
 
 export type ProcessingToolSchema = {
-    title: string
     description?: string
-    type?: string
     properties: {
         [key: string]: {
-            title: string
+            name: string
+            type: string
             description?: string
-            type?: string
             default?: any
-            allOf?: {
-                $ref: string
-            }[]
+            choices?: any[]
+            group?: string
         }
-    }
-    required?: string[]
-    definitions?: { // depending on the version of pydantic, this is either definitions or $defs
-        [key: string]: ProcessingToolSchema
-    },
-    "$defs"?: {
-        [key: string]: ProcessingToolSchema
     }
 }
 
 export const isProcessingToolSchema = (x: any): x is ProcessingToolSchema => {
     return validateObject(x, {
-        title: isString,
         description: optional(isString),
-        type: optional(isString),
-        properties: () => true,
-        required: optional(isArrayOf(isString)),
-        definitions: optional(() => true),
-        "$defs": optional(() => true)
+        properties: y => {
+            if (typeof y !== 'object') return false
+            for (const k in y) {
+                if (!validateObject(y[k], {
+                    name: isString,
+                    type: isString,
+                    description: optional(isString),
+                    default: optional(() => true),
+                    choices: optional(() => true),
+                    group: optional(isString)
+                })) return false
+            }
+            return true
+        }
     })
 }
 

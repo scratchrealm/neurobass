@@ -12,6 +12,8 @@ from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
 
 
+sorting_params_group = 'sorting_params'
+
 class Kilosort3Model(BaseModel):
     """Kilosort3 is a spike sorting software package developed by Marius Pachitariu at Janelia Research Campus.
 It uses a GPU-accelerated algorithm to detect, align, and cluster spikes across many channels.
@@ -24,26 +26,26 @@ For more information see https://github.com/MouseLand/Kilosort
     output: OutputFile = Field(..., description="Output NWB file")
     electrical_series_path: str = Field(..., description="Path to the electrical series in the NWB file, e.g., /acquisition/ElectricalSeries")
     
-    detect_threshold: float = Field(6, description="Threshold for spike detection")
-    projection_threshold: List[float] = Field([9, 9], description="Threshold on projections")
-    preclust_threshold: float = Field(8, description="Threshold crossings for pre-clustering (in PCA projection space)")
-    car: bool = Field(True, description="Enable or disable common reference")
-    minFR: float = Field(0.2, description="Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed")
-    minfr_goodchannels: float = Field(0.2, description="Minimum firing rate on a 'good' channel")
-    nblocks: int = Field(5, description="blocks for registration. 0 turns it off, 1 does rigid registration. Replaces 'datashift' option.")
-    sig: int = Field(20, description="spatial smoothness constant for registration")
-    freq_min: int = Field(300, description="High-pass filter cutoff frequency")
-    sigmaMask: int = Field(30, description="Spatial constant in um for computing residual variance of spike")
-    nPCs: int = Field(3, description="Number of PCA dimensions")
-    ntbuff: int = Field(64, description="Samples of symmetrical buffer for whitening and spike detection")
-    nfilt_factor: int = Field(4, description="Max number of clusters per good channel (even temporary ones) 4")
-    do_correction: bool = Field(True, description="If True drift registration is applied")
-    NT: int = Field(None, description="Batch size (if None it is automatically computed)")
-    AUCsplit: float = Field(0.8, description="Threshold on the area under the curve (AUC) criterion for performing a split in the final step")
-    wave_length: int = Field(61, description="size of the waveform extracted around each detected peak, (Default 61, maximum 81)")
-    keep_good_only: bool = Field(False, description="If True only 'good' units are returned")
-    skip_kilosort_preprocessing: bool = Field(False, description="Can optionaly skip the internal kilosort preprocessing")
-    scaleproc: int = Field(None, description="int16 scaling of whitened data, if None set to 200.")
+    detect_threshold: float = Field(6, description="Threshold for spike detection", group=sorting_params_group)
+    projection_threshold: List[float] = Field([9, 9], description="Threshold on projections", group=sorting_params_group)
+    preclust_threshold: float = Field(8, description="Threshold crossings for pre-clustering (in PCA projection space)", group=sorting_params_group)
+    car: bool = Field(True, description="Enable or disable common reference", group=sorting_params_group)
+    minFR: float = Field(0.2, description="Minimum spike rate (Hz), if a cluster falls below this for too long it gets removed", group=sorting_params_group)
+    minfr_goodchannels: float = Field(0.2, description="Minimum firing rate on a 'good' channel", group=sorting_params_group)
+    nblocks: int = Field(5, description="blocks for registration. 0 turns it off, 1 does rigid registration. Replaces 'datashift' option.", group=sorting_params_group)
+    sig: int = Field(20, description="spatial smoothness constant for registration", group=sorting_params_group)
+    freq_min: int = Field(300, description="High-pass filter cutoff frequency", group=sorting_params_group)
+    sigmaMask: int = Field(30, description="Spatial constant in um for computing residual variance of spike", group=sorting_params_group)
+    nPCs: int = Field(3, description="Number of PCA dimensions", group=sorting_params_group)
+    ntbuff: int = Field(64, description="Samples of symmetrical buffer for whitening and spike detection", group=sorting_params_group)
+    nfilt_factor: int = Field(4, description="Max number of clusters per good channel (even temporary ones) 4", group=sorting_params_group)
+    do_correction: bool = Field(True, description="If True drift registration is applied", group=sorting_params_group)
+    NT: int = Field(None, description="Batch size (if None it is automatically computed)", group=sorting_params_group)
+    AUCsplit: float = Field(0.8, description="Threshold on the area under the curve (AUC) criterion for performing a split in the final step", group=sorting_params_group)
+    wave_length: int = Field(61, description="size of the waveform extracted around each detected peak, (Default 61, maximum 81)", group=sorting_params_group)
+    keep_good_only: bool = Field(False, description="If True only 'good' units are returned", group=sorting_params_group)
+    skip_kilosort_preprocessing: bool = Field(False, description="Can optionaly skip the internal kilosort preprocessing", group=sorting_params_group)
+    scaleproc: int = Field(None, description="int16 scaling of whitened data, if None set to 200.", group=sorting_params_group)
 
 class Kilosort3ProcessingTool(NeurobassProcessingTool):
     @classmethod
@@ -59,8 +61,8 @@ class Kilosort3ProcessingTool(NeurobassProcessingTool):
     def get_tags(cls) -> List[str]:
         return ['spike_sorting', 'spike_sorter']
     @classmethod
-    def get_schema(cls) -> dict:
-        return json.loads(Kilosort3Model.schema_json())
+    def get_model(cls) -> BaseModel:
+        return Kilosort3Model
     @classmethod
     def run(cls, context: NeurobassProcessingToolContext):
         _run(context)

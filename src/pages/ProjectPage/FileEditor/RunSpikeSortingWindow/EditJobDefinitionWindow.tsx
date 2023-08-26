@@ -152,16 +152,16 @@ const EditParameterValue: FunctionComponent<EditParameterValueProps> = ({paramet
     if (name === 'electrical_series_path') {
         return <ElectricalSeriesPathSelector value={value} nwbFile={nwbFile} setValue={setValue} />
     }
-    else if (type === 'string') {
+    else if (type === 'str') {
         return <input type="text" value={value} onChange={evt => {setValue(evt.target.value)}} />
     }
-    else if (type === 'integer') {
+    else if (type === 'int') {
         return <input type="number" value={value} onChange={evt => {setValue(evt.target.value)}} />
     }
-    else if (type === 'number') {
+    else if (type === 'float') {
         return <input type="number" value={value} onChange={evt => {setValue(evt.target.value)}} />
     }
-    else if (type === 'boolean') {
+    else if (type === 'bool') {
         return <input type="checkbox" checked={value === 'true'} onChange={evt => {setValue(evt.target.checked ? 'true' : 'false')}} />
     }
     else if (type === 'Enum') {

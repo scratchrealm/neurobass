@@ -85,16 +85,15 @@ export class ProcessingToolSchemaParser {
     #outputs: {name: string, description: string}[] = []
     #parameters: ProcessingToolSchemaParameter[] = []
     constructor(private schema: ProcessingToolSchema) {
-        for (const k in schema.properties) {
-            const p = schema.properties[k]
+        for (const p of schema.properties) {
             if (p.type === 'InputFile') {
-                this.#inputs.push({name: k, description: p.description || ''})
+                this.#inputs.push({name: p.name, description: p.description || ''})
             }
             else if (p.type === 'OutputFile') {
-                this.#outputs.push({name: k, description: p.description || ''})
+                this.#outputs.push({name: p.name, description: p.description || ''})
             }
             else {
-                this.#parameters.push({name: k, description: p.description || '', type: p.type, default: p.default, group: p.group, choices: p.choices})
+                this.#parameters.push({name: p.name, description: p.description || '', type: p.type, default: p.default, group: p.group, choices: p.choices})
             }
         }
     }

@@ -2,8 +2,14 @@ from enum import Enum
 from typing import Any, List
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from pydantic_core import PydanticUndefined
 import inspect
+
+try:
+    # this works in pydantic v2
+    from pydantic_core import PydanticUndefined
+except:
+    # for pydantic v1
+    PydanticUndefined = None
 
 class InputFile(BaseModel):
     path: str

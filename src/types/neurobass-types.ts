@@ -193,34 +193,26 @@ export const isNBComputeResource = (x: any): x is NBComputeResource => {
 export type ProcessingToolSchema = {
     description?: string
     properties: {
-        [key: string]: {
-            name: string
-            type: string
-            description?: string
-            default?: any
-            choices?: any[]
-            group?: string
-        }
-    }
+        name: string
+        type: string
+        description?: string
+        default?: any
+        choices?: any[]
+        group?: string
+    }[]
 }
 
 export const isProcessingToolSchema = (x: any): x is ProcessingToolSchema => {
     return validateObject(x, {
         description: optional(isString),
-        properties: y => {
-            if (typeof y !== 'object') return false
-            for (const k in y) {
-                if (!validateObject(y[k], {
-                    name: isString,
-                    type: isString,
-                    description: optional(isString),
-                    default: optional(() => true),
-                    choices: optional(() => true),
-                    group: optional(isString)
-                })) return false
-            }
-            return true
-        }
+        properties: isArrayOf(y => (validateObject(y, {
+            name: isString,
+            type: isString,
+            description: optional(isString),
+            default: optional(() => true),
+            choices: optional(() => true),
+            group: optional(isString)
+        })))
     })
 }
 

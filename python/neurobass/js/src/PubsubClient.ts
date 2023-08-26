@@ -10,8 +10,8 @@ class PubsubClient {
             })
             this.#pubnubClient.addListener({
                 status: (statusEvent) => {
-                    console.info('PubNub status event')
-                    console.info(statusEvent)
+                    // console.info('PubNub status event')
+                    // console.info(statusEvent)
                     if (statusEvent.category === "PNConnectedCategory") {
                         console.info("PubNub connected");
                     }

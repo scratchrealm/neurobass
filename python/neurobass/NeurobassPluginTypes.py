@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, List
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+from pydantic_core import PydanticUndefined
 import inspect
 
 class InputFile(BaseModel):
@@ -117,7 +118,7 @@ class NeurobassProcessingTool(ABC):
                 # this is for pydantic v2
                 field_info = ff
             field_default = field_info.default
-            if field_default == Ellipsis:
+            if field_default == Ellipsis or field_default == PydanticUndefined:
                 field_default = None
         
             kwargs = {}
@@ -126,7 +127,6 @@ class NeurobassProcessingTool(ABC):
             for k in valid_extra_keys:
                 if k in extra:
                     kwargs[k] = extra[k]
-            print(field_type)
             if inspect.isclass(field_type) and issubclass(field_type, InputFile):
                 field_type_str = 'InputFile'
             elif inspect.isclass(field_type) and issubclass(field_type, OutputFile):
@@ -166,7 +166,6 @@ class NeurobassProcessingTool(ABC):
                 pp['default'] = field_default
 
             ret['properties'].append(pp)
-        print(ret)
         return ret
 
 class NeurobassPluginContext(ABC):

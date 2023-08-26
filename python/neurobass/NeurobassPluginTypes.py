@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, List
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+import inspect
 
 class InputFile(BaseModel):
     path: str
@@ -107,37 +108,65 @@ class NeurobassProcessingTool(ABC):
         if cls.__doc__ is not None:
             ret['description'] = cls.__doc__
         model = cls.get_model()
-        for name, field in model.__annotations__.items():
-            ff = model.__fields__[name]
-            field_default = ff.default
-            field_schema = ff.field_info
-            field_type = ff.type_
+        for field_name, field_type in model.__annotations__.items():
+            ff = model.__fields__[field_name]
+            if hasattr(ff, 'field_info'):
+                # this is for pydantic v1
+                field_info = ff.field_info
+            else:
+                # this is for pydantic v2
+                field_info = ff
+            field_default = field_info.default
+            if field_default == Ellipsis:
+                field_default = None
         
             kwargs = {}
-            extra = getattr(field_schema, 'extra', {})
+            extra = getattr(field_info, 'extra', {})
             valid_extra_keys = ['group']
             for k in valid_extra_keys:
                 if k in extra:
                     kwargs[k] = extra[k]
-            if issubclass(field_type, InputFile):
+            print(field_type)
+            if inspect.isclass(field_type) and issubclass(field_type, InputFile):
                 field_type_str = 'InputFile'
-            elif issubclass(field_type, OutputFile):
+            elif inspect.isclass(field_type) and issubclass(field_type, OutputFile):
                 field_type_str = 'OutputFile'
-            elif issubclass(field_type, Enum):
+            elif inspect.isclass(field_type) and issubclass(field_type, Enum):
                 field_type_str = 'Enum'
-                kwargs['choices'] = [x.value for x in field]
+                kwargs['choices'] = [x.value for x in field_type]
             else:
-                if ff.outer_type_ == List[float]:
+                if field_type == float:
+                    field_type_str = 'float'
+                elif field_type == int:
+                    field_type_str = 'int'
+                elif field_type == bool:
+                    field_type_str = 'bool'
+                elif field_type == str:
+                    field_type_str = 'str'
+                elif field_type == List[int]:
+                    # handle this case specially
+                    field_type_str = 'List[int]'
+                elif field_type == List[str]:
+                    field_type_str = 'List[str]'
+                elif field_type == List[float]:
+                    # handle this case specially
                     field_type_str = 'List[float]'
                 else:
-                    field_type_str = field_type.__name__
-            ret['properties'].append({
-                'name': name,
+                    raise Exception(f'Unexpected field type: {field_type}')
+            if type(field_info.description) != str:
+                raise Exception(f'Unexpected description type: {type(field_info.description)}')
+            
+            pp = {
+                'name': field_name,
                 'type': field_type_str,
-                'description': field_schema.description,
-                'default': field_default,
+                'description': field_info.description,
                 **kwargs
-            })
+            }
+            if field_default is not None:
+                pp['default'] = field_default
+
+            ret['properties'].append(pp)
+        print(ret)
         return ret
 
 class NeurobassPluginContext(ABC):

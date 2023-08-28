@@ -26,6 +26,7 @@
     "axios": "^1.3.5",
     "express": "^4.18.2",
     "pubnub": "^7.2.2",
+    "tree-kill": "^1.2.2",
     "tweetnacl": "^1.0.3",
     "yargs": "^17.6.2"
   }

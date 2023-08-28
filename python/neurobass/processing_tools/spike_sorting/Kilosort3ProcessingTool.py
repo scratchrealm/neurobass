@@ -72,7 +72,6 @@ def _run(context: NeurobassProcessingToolContext):
     working_dir = 'working'
     os.mkdir(working_dir)
 
-    print('--- xxx', context.get_data())
     data = Kilosort3Model(**context.get_data())
 
     nwb_url = context.get_input_file_url(data.input)

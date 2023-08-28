@@ -4,6 +4,7 @@ import path from 'path';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
 import { NBJob } from "./types/neurobass-types";
 import { GetFileRequest, GetJobRequest, NeurobassResponse, SetFileRequest, SetJobPropertyRequest } from "./types/NeurobassRequest";
+import treeKill from 'tree-kill'
 
 const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
 
@@ -124,7 +125,7 @@ export class RunningJob {
     stop() {
         if (this.#childProcess) {
             try {
-                this.#childProcess.kill()
+                treeKill(this.#childProcess.pid)
             }
             catch (e) {
                 console.warn(e)

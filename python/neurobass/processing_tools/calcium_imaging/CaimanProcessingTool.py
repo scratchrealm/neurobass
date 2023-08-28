@@ -39,7 +39,7 @@ def _run(context: NeurobassProcessingToolContext):
     working_dir = 'working'
     os.mkdir(working_dir)
 
-    data = CaimanModel(context.get_data())
+    data = CaimanModel(**context.get_data())
 
     nwb_url = context.get_input_file_url(data.input)
 

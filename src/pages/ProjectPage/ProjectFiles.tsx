@@ -76,7 +76,7 @@ const ProjectFiles: FunctionComponent<{width: number, height: number}> = ({width
                 onDeleteFile={handleDeleteFile}
                 onDuplicateFile={handleDuplicateFile}
                 onRenameFile={handleRenameFile}
-                hideSizeColumn={true}
+                hideSizeColumn={false}
             />
             <ProjectTabWidget
                 width={0}

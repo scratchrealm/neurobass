@@ -341,20 +341,23 @@ neurobass run-job
             
             await updateConsoleOutput()
 
-            const output = await loadOutputJson(jobDir)
             for (const a of this.job.outputFiles) {
-                const x = output.outputs[a.name]
-                if (!x) {
-                    throw Error(`Unexpected: output file not found: ${a.name}`)
+                const outputFname = path.join(jobDir, 'outputs', `${a.name}.json`)
+                if (!fs.existsSync(outputFname)) {
+                    throw Error(`Unexpected: output file not found: ${outputFname}`)
                 }
+
+                const outputText = fs.readFileSync(outputFname, {encoding: 'utf8'})
+                const output: {url: string, size: number} = JSON.parse(outputText)
+
                 const req: SetFileRequest = {
                     type: 'setFile',
                     timestamp: Date.now() / 1000,
                     projectId: this.job.projectId,
                     workspaceId: this.job.workspaceId,
                     fileName: a.fileName,
-                    content: `url:${x.url}`,
-                    size: x.size,
+                    content: `url:${output.url}`,
+                    size: output.size,
                     jobId: this.job.jobId,
                     metadata: {}
                 }
@@ -380,18 +383,6 @@ neurobass run-job
             return
         }
     }
-}
-
-type OutputJson = {
-    outputs: {[key: string]: {
-        url: string
-        size: number
-    }}
-}
-
-const loadOutputJson = async (jobDir: string): Promise<OutputJson> => {
-    const output = await fs.promises.readFile(path.join(jobDir, 'output', 'out.json'), {encoding: 'utf8'})
-    return JSON.parse(output)
 }
 
 // const runCommand = async (cmd: string): Promise<{stdout: string, stderr: string}> => {

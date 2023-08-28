@@ -2,20 +2,8 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
-import { NBFile, NBJob } from "./types/neurobass-types";
-import { GetDataBlobRequest, GetFileRequest, GetFilesRequest, NeurobassResponse, SetFileRequest, SetJobPropertyRequest } from "./types/NeurobassRequest";
-
-
-export const getPresetConfig = () => {
-    // hard-code this as flatiron for now
-    return process.env.PRESET_CONFIG || 'flatiron'
-}
-const presetConfig = getPresetConfig()
-
-type SortingOutput = {
-    output_file_url: string
-    output_file_size: number
-}
+import { NBJob } from "./types/neurobass-types";
+import { GetFileRequest, GetJobRequest, NeurobassResponse, SetFileRequest, SetJobPropertyRequest } from "./types/NeurobassRequest";
 
 const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
 
@@ -44,14 +32,14 @@ class JobManager {
         this.#runningJobs.forEach(j => j.stop())
     }
     async cleanupOldJobs() {
-        // list all folders in script_jobs directory
-        const jobsDir = path.join(this.config.dir, 'script_jobs')
+        // list all folders in jobs directory
+        const jobsDir = path.join(this.config.dir, 'jobs')
         if (!fs.existsSync(jobsDir)) {
             return
         }
         const folders = await fs.promises.readdir(jobsDir)
         for (const folder of folders) {
-            const folderPath = path.join(this.config.dir, 'script_jobs', folder)
+            const folderPath = path.join(this.config.dir, 'jobs', folder)
             const stat = await fs.promises.stat(folderPath)
             if (stat.isDirectory()) {
                 // check how old the folder is
@@ -161,7 +149,7 @@ export class RunningJob {
         }
         const resp = await this._postNeurobassRequest(req)
         if (!resp) {
-            throw Error('Unable to set job property')
+            throw Error(`Unable to set job property: ${property} = ${value}`)
         }
         if (resp.type !== 'setJobProperty') {
             console.warn(resp)
@@ -175,109 +163,6 @@ export class RunningJob {
             computeResourcePrivateKey: process.env.COMPUTE_RESOURCE_PRIVATE_KEY
         })
     }
-    private async _loadFileData(fileName: string): Promise<string> {
-        const cc = await this._loadFileContentString(fileName)
-        if (cc.startsWith('data:')) {
-            return cc.slice('data:'.length)
-        }
-        else if (cc.startsWith('blob:')) {
-            return await this._loadDataBlob(cc.slice('blob:'.length))
-        }
-        else {
-            throw Error('Unable to load file content: ' + fileName + ' ' + cc)
-        }
-    }
-    private async _loadFileContentString(fileName: string): Promise<string> {
-        const req: GetFileRequest = {
-            type: 'getFile',
-            timestamp: Date.now() / 1000,
-            projectId: this.job.projectId,
-            fileName
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error('Unable to get project file')
-        }
-        if (resp.type !== 'getFile') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected getFile')
-        }
-        return resp.file.content
-    }
-    private async _loadDataBlob(sha1: string): Promise<string> {
-        const req: GetDataBlobRequest = {
-            type: 'getDataBlob',
-            timestamp: Date.now() / 1000,
-            workspaceId: this.job.workspaceId,
-            projectId: this.job.projectId,
-            sha1
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error('Unable to get data blob')
-        }
-        if (resp.type !== 'getDataBlob') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected getDataBlob')
-        }
-        return resp.content
-    }
-    async _setFile(fileName: string, fileContent: string) {
-        const req: SetFileRequest = {
-            type: 'setFile',
-            timestamp: Date.now() / 1000,
-            workspaceId: this.job.workspaceId,
-            projectId: this.job.projectId,
-            fileName,
-            fileData: fileContent,
-            size: fileContent.length,
-            metadata: {}
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error('Unable to set project file')
-        }
-        if (resp.type !== 'setFile') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected setFile')
-        }
-    }
-    async _setUrlFile(fileName: string, url: string, size: number) {
-        const req: SetFileRequest = {
-            type: 'setFile',
-            timestamp: Date.now() / 1000,
-            workspaceId: this.job.workspaceId,
-            projectId: this.job.projectId,
-            fileName,
-            content: `url:${url}`,
-            size,
-            metadata: {}
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error('Unable to set project file')
-        }
-        if (resp.type !== 'setFile') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected setFile')
-        }
-    }
-    private async _loadFiles(projectId: string): Promise<NBFile[]> {
-        const req: GetFilesRequest = {
-            type: 'getFiles',
-            timestamp: Date.now() / 1000,
-            projectId
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error('Unable to get project')
-        }
-        if (resp.type !== 'getFiles') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected getFiles')
-        }
-        return resp.files
-    }
     private async _run() {
         if (this.#childProcess) {
             throw Error('Unexpected: Child process already running')
@@ -287,48 +172,84 @@ export class RunningJob {
         let lastUpdateConsoleOutputTimestamp = Date.now()
         const updateConsoleOutput = async () => {
             lastUpdateConsoleOutputTimestamp = Date.now()
-            await this._setJobProperty('consoleOutput', consoleOutput)
+            const okay = await this._setJobProperty('consoleOutput', consoleOutput)
+            if (!okay) {
+                // maybe the job no longer exists
+                console.warn('Unable to set job console output. Maybe job no longer exists.')
+            }
+        }
+        let lastCheckCanceledTimestamp = Date.now()
+        const checkCanceled = async () => {
+            lastCheckCanceledTimestamp = Date.now()
+            const req: GetJobRequest = {
+                type: 'getJob',
+                timestamp: Date.now() / 1000,
+                workspaceId: this.job.workspaceId,
+                projectId: this.job.projectId,
+                jobId: this.job.jobId
+            }
+            try {
+                const resp = await this._postNeurobassRequest(req)
+                if (resp.type !== 'getJob') {
+                    console.warn(resp)
+                    throw Error('Unexpected response type. Expected getJob')
+                }
+            }
+            catch(err) {
+                console.warn(err)
+                console.warn('Unable to get job. Canceling')
+                this.stop()
+            }
         }
         try {
             const toolName = this.job.toolName
-            if (!['script', 'mountainsort5', 'kilosort3'].includes(toolName)) {
-                throw Error(`Unexpected process type: ${toolName}`)
-            }
-            const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'script_jobs', this.job.jobId)
+            const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'jobs', this.job.jobId)
             fs.mkdirSync(jobDir, {recursive: true})
 
-            const files = await this._loadFiles(this.job.projectId)
+            const jobJsonFilePath = path.join(jobDir, 'job.json')
+            const input_files = []
+            for (const a of this.job.inputFiles) {
+                const req: GetFileRequest = {
+                    type: 'getFile',
+                    timestamp: Date.now() / 1000,
+                    projectId: this.job.projectId,
+                    fileName: a.fileName
+                }
+                const resp = await this._postNeurobassRequest(req)
+                if (resp.type !== 'getFile') {
+                    console.warn(resp)
+                    throw Error('Unexpected response type. Expected getFile')
+                }
+                const content_string = resp.file.content
+                input_files.push({
+                    name: a.name,
+                    path: a.fileName,
+                    content_string
+                })
+            }
+            const output_files = []
+            for (const a of this.job.outputFiles) {
+                output_files.push({
+                    name: a.name,
+                    path: a.fileName
+                })
+            }
+            const parameters = []
+            for (const a of this.job.inputParameters) {
+                parameters.push({
+                    name: a.name,
+                    value: a.value
+                })
+            }
+            const jobJson = {
+                tool_name: toolName,
+                input_files,
+                output_files,
+                parameters
+            }
+            fs.writeFileSync(jobJsonFilePath, JSON.stringify(jobJson, null, 4))
 
-            let scriptPyFileName = ''
-            if (toolName === 'script') {
-                scriptPyFileName = (this.job.inputParameters.find(p => (p.name === 'script_file')) || {}).value
-                if (!scriptPyFileName) {
-                    throw Error('Missing script_file parameter')
-                }
-                if (!scriptPyFileName.endsWith('.py')) {
-                    throw Error('Only python scripts are supported')
-                }
-                const scriptFileContent = await this._loadFileData(scriptPyFileName)
-                fs.writeFileSync(path.join(jobDir, scriptPyFileName), scriptFileContent)
-                for (const pf of files) {
-                    let includeFile = false
-                    if ((scriptFileContent.includes(`'${pf.fileName}'`)) || (scriptFileContent.includes(`"${pf.fileName}"`))) {
-                        // the file is referenced in the script
-                        includeFile = true
-                    }
-                    else if (pf.fileName.endsWith('.py')) {
-                        const moduleName = pf.fileName.replace('.py', '')
-                        if ((scriptFileContent.includes(`import ${moduleName}`)) || (scriptFileContent.includes(`from ${moduleName}`)) || (scriptFileContent.includes(`import ${moduleName}.`)) || (scriptFileContent.includes(`from ${moduleName}.`))) {
-                            // the module is imported in the script
-                            includeFile = true
-                        }
-                    }
-                    if (includeFile) {
-                        const content = await this._loadFileData(pf.fileName)
-                        fs.writeFileSync(path.join(jobDir, pf.fileName), content)
-                    }
-                }
-                const runShContent = `
+            const runShContent = `
 set -e # exit on error and use return code of last command as return code of script
 clean_up () {
     ARG=$?
@@ -336,147 +257,25 @@ clean_up () {
     exit $ARG
 } 
 trap clean_up EXIT
-python3 ${scriptPyFileName}
+
+export CONTAINER_METHOD=${process.env.CONTAINER_METHOD}
+export OUTPUT_ENDPOINT_URL=${process.env.OUTPUT_ENDPOINT_URL}
+export OUTPUT_AWS_ACCESS_KEY_ID=${process.env.OUTPUT_AWS_ACCESS_KEY_ID}
+export OUTPUT_AWS_SECRET_ACCESS_KEY=${process.env.OUTPUT_AWS_SECRET_ACCESS_KEY}
+export OUTPUT_BUCKET=${process.env.OUTPUT_BUCKET}
+export OUTPUT_BUCKET_BASE_URL=${process.env.OUTPUT_BUCKET_BASE_URL}
+
+neurobass run-job
 `
-                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
-            }
-            if (['mountainsort5', 'kilosort3'].includes(toolName)) {
-                let analysisRunPrefix = process.env.ANALYSIS_RUN_PREFIX || ''
-                if ((!analysisRunPrefix) && (presetConfig === 'flatiron')) {
-                    if (toolName === 'kilosort3') {
-                        analysisRunPrefix = 'srun -p gpu --gpus-per-task 1 --gpus 1 -t 0-4:00'
-                    }
-                }
-
-                const analysisScriptsDir = process.env.ANALYSIS_SCRIPTS_DIR
-                if (!analysisScriptsDir) throw Error('ANALYSIS_SCRIPTS_DIR environment variable not set.')
-
-                const recordingNwbFile = this.job.inputFiles.find(f => (f.name === 'input'))?.fileName
-                if (!recordingNwbFile) {
-                    throw Error('Missing input file')
-                }
-
-                let runPyContent: string
-
-                const x = files.find(pf => pf.fileName === recordingNwbFile)
-                if (!x) {
-                    throw new Error(`Unable to find recording_nwb_file: ${recordingNwbFile}`)
-                }
-                const cs = await this._loadFileContentString(recordingNwbFile)
-                if (!cs.startsWith('url:')) {
-                    throw Error('Unexpected file content string: ' + cs)
-                }
-                const nwbUrl = cs.slice('url:'.length)
-                if (toolName === 'mountainsort5') {
-                    runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_mountainsort5.py'), 'utf8')
-                }
-                else if (toolName === 'kilosort3') {
-                    runPyContent = fs.readFileSync(path.join(analysisScriptsDir, 'analysis_kilosort3.py'), 'utf8')
-                }
-                
-                fs.writeFileSync(path.join(jobDir, 'run.py'), runPyContent)
-
-                // write all the .py files in the analysisScriptsDir/helpers
-                fs.mkdirSync(path.join(jobDir, 'helpers'), {recursive: true})
-                const helpersDir = path.join(analysisScriptsDir, 'helpers')
-                const helperFiles = fs.readdirSync(helpersDir)
-                for (const helperFile of helperFiles) {
-                    if (helperFile.endsWith('.py')) {
-                        const helperFileContent = fs.readFileSync(path.join(helpersDir, helperFile), 'utf8')
-                        fs.writeFileSync(path.join(jobDir, 'helpers', helperFile), helperFileContent)
-                    }
-                }
-
-                const runShContent = `
-set -e # exit on error and use return code of last command as return code of script
-clean_up () {
-    ARG=$?
-    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-    exit $ARG
-} 
-trap clean_up EXIT
-export INPUT_NWB_URL="${nwbUrl}"
-${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
-`
-                fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
-            }
+            fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
 
             await new Promise<void>((resolve, reject) => {
                 let returned = false
 
-                // const cmd = 'python'
-                // const args = [scriptFileName]
+                const cmd = 'bash'
+                const args = ['run.sh']
 
-                let cmd: string
-                let args: string[]
-
-                let containerMethod = process.env.CONTAINER_METHOD || 'none'
-                if (toolName !== 'script') {
-                    containerMethod = 'none'
-                }
-
-                const absJobDir = path.resolve(jobDir)
-
-                if (containerMethod === 'singularity') {
-                    cmd = 'singularity'
-                    args = [
-                        'exec',
-                        '-C', // do not mount home directory, tmp directory, etc
-                        '--pwd', '/working',
-                        '--bind', `${absJobDir}:/working`
-                    ]
-                    if (toolName === 'script') {
-                        args = [...args, ...[
-                            // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
-                            // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
-                            'docker://magland/neurobass-default',
-                            'bash', 'run.sh'
-                        ]]
-                    }
-                    else {
-                        args = [...args, ...[
-                            // '--cpus', `${this.jobSlot.num_cpus}`, // limit CPU - having trouble with this - cgroups issue
-                            // '--memory', `${this.jobSlot.ram_gb}G`, // limit memory - for now disable because this option is not available on the FI cluster
-                            'docker://magland/neurobass-default',
-                            'bash', 'run.sh'
-                        ]]
-                    }
-                }
-                else if (containerMethod === 'docker') {
-                    cmd = 'docker'
-                    args = [
-                        'run',
-                        '--rm', // remove container after running
-                        '-v', `${absJobDir}:/working`,
-                        '-w', '/working'
-                    ]
-                    if (toolName === 'singularity') {
-                        const num_cpus = 2
-                        const ram_gb = 2
-                        args = [...args, ...[
-                            '--cpus', `${num_cpus}`, // limit CPU
-                            '--memory', `${ram_gb}g`, // limit memory
-                            'magland/neurobass-default',
-                            'bash',
-                            '-c', `bash run.sh` // tricky - need to put the last two args together so that it ends up in a quoted argument
-                        ]]
-                    }
-                    else {
-                        args = [...args, ...[
-                            'magland/neurobass-default',
-                            'bash',
-                            '-c', 'bash run.sh' // tricky - need to put the last two args together so that it ends up in a quoted argument
-                        ]]
-                    }
-                }
-                else if (containerMethod === 'none') {
-                    cmd = 'bash'
-                    args = ['run.sh']
-                }
-                else {
-                    throw Error(`Unsupported container: ${containerMethod}`)
-                }
-
+                console.info('WORKING DIR:', jobDir)
                 console.info('EXECUTING:', `${cmd} ${args.join(' ')}`)
 
                 const timeoutSec = 60 * 60 * 3 // 3 hours
@@ -524,46 +323,45 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
                         resolve()
                     }
                 })
+
+                ; (async () => {
+                    while (!returned) {
+                        await new Promise<void>((resolve2) => {
+                            setTimeout(() => {
+                                resolve2()
+                            }, 1000)
+                        })
+                        if (Date.now() - lastCheckCanceledTimestamp > 60000) {
+                            checkCanceled()
+                        }
+                    }
+                })()
             })
             
             await updateConsoleOutput()
 
-            if (toolName === 'script') {
-                const outputFileNames: string[] = []
-                const files = fs.readdirSync(jobDir)
-                for (const file of files) {
-                    if ((file !== scriptPyFileName) && (file !== 'run.sh')) {
-                        // check whether it is a file
-                        const stat = fs.statSync(path.join(jobDir, file))
-                        if (stat.isFile()) {
-                            outputFileNames.push(file)
-                        }
-                    }
+            const output = await loadOutputJson(jobDir)
+            for (const a of this.job.outputFiles) {
+                const x = output.outputs[a.name]
+                if (!x) {
+                    throw Error(`Unexpected: output file not found: ${a.name}`)
                 }
-                const maxOutputFiles = 5
-                if (outputFileNames.length > maxOutputFiles) {
-                    console.info('Too many output files.')
-                    await this._setJobProperty('error', 'Too many output files.')
-                    await this._setJobProperty('status', 'failed')
-                    this.#status = 'failed'
-
-                    this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
-                    return
+                const req: SetFileRequest = {
+                    type: 'setFile',
+                    timestamp: Date.now() / 1000,
+                    projectId: this.job.projectId,
+                    workspaceId: this.job.workspaceId,
+                    fileName: a.fileName,
+                    content: `url:${x.url}`,
+                    size: x.size,
+                    jobId: this.job.jobId,
+                    metadata: {}
                 }
-                for (const outputFileName of outputFileNames) {
-                    console.info('Uploading output file: ' + outputFileName)
-                    const content = fs.readFileSync(path.join(jobDir, outputFileName), 'utf8')
-                    await this._setFile(outputFileName, content)
+                const resp = await this._postNeurobassRequest(req)
+                if (resp.type !== 'setFile') {
+                    console.warn(resp)
+                    throw Error('Unexpected response type. Expected setFile')
                 }
-            }
-            else {
-                // spike sorting output
-                const out = await loadOutputJson(jobDir)
-                const outputFileName = this.job.outputFiles.find(f => (f.name === 'output'))?.fileName
-                if (!outputFileName) {
-                    throw Error('No output file specified')
-                }
-                await this._setUrlFile(outputFileName, out.output_file_url, out.output_file_size)
             }
 
             await this._setJobProperty('status', 'completed')
@@ -583,7 +381,14 @@ ${analysisRunPrefix ? analysisRunPrefix + ' ' : ''}python3 run.py
     }
 }
 
-const loadOutputJson = async (jobDir: string): Promise<SortingOutput> => {
+type OutputJson = {
+    outputs: {[key: string]: {
+        url: string
+        size: number
+    }}
+}
+
+const loadOutputJson = async (jobDir: string): Promise<OutputJson> => {
     const output = await fs.promises.readFile(path.join(jobDir, 'output', 'out.json'), {encoding: 'utf8'})
     return JSON.parse(output)
 }

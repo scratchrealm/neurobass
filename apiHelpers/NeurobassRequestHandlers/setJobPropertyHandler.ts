@@ -18,7 +18,11 @@ const setJobPropertyHandler = async (request: SetJobPropertyRequest, o: {verifie
         jobId: request.jobId
     }))
     if (!job) {
-        throw new Error(`No job with ID ${request.jobId}`)
+        return {
+            type: 'setJobProperty',
+            success: false,
+            error: 'Job not found.'
+        }
     }
     if (!isNBJob(job)) {
         console.warn(job)

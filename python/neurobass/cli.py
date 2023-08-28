@@ -2,6 +2,7 @@ import click
 import neurobass
 from .init_compute_resource_node import init_compute_resource_node as init_compute_resource_node_function
 from .start_compute_resource_node import start_compute_resource_node as start_compute_resource_node_function
+from .run_job import run_job as run_job_function
 
 @click.group(help="neurobass command line interface")
 def main():
@@ -17,6 +18,10 @@ def init_compute_resource_node(compute_resource_id: str, compute_resource_privat
 def start_compute_resource_node():
     start_compute_resource_node_function(dir='.')
 
+@click.command(help='Run the job in the current directory (used internally)')
+def run_job():
+    run_job_function()
+
 @click.command(help='Initialize the singularity container')
 def init_singularity_container():
     neurobass.init_singularity_container()
@@ -27,5 +32,6 @@ def init_docker_container():
 
 main.add_command(init_compute_resource_node)
 main.add_command(start_compute_resource_node)
+main.add_command(run_job)
 main.add_command(init_singularity_container)
 main.add_command(init_docker_container)

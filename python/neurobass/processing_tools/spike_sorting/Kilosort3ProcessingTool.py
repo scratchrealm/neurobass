@@ -1,8 +1,8 @@
 import os
-import json
 from typing import List
 from pydantic import BaseModel, Field
 from ...NeurobassPluginTypes import NeurobassProcessingTool, NeurobassProcessingToolContext, InputFile, OutputFile
+import numpy as np
 import pynwb
 import h5py
 import remfile
@@ -10,6 +10,7 @@ import spikeinterface as si
 import spikeinterface.preprocessing as spre
 from .NwbRecording import NwbRecording
 from .create_sorting_out_nwb_file import create_sorting_out_nwb_file
+from .helpers.run_kilosort3 import run_kilosort3
 
 
 sorting_params_group = 'sorting_params'
@@ -71,7 +72,8 @@ def _run(context: NeurobassProcessingToolContext):
     working_dir = 'working'
     os.mkdir(working_dir)
 
-    data = Kilosort3Model(context.get_data())
+    print('--- xxx', context.get_data())
+    data = Kilosort3Model(**context.get_data())
 
     nwb_url = context.get_input_file_url(data.input)
 
@@ -87,11 +89,42 @@ def _run(context: NeurobassProcessingToolContext):
         electrical_series_path=recording_electrical_series_path
     )
 
-    if working_dir == 'working':
-        raise Exception('Not yet implemented')
-    
-    # placeholder
-    sorting = si.NpzSortingExtractor()
+    # important to make a binary recording so that it can be serialized in the format expected by kilosort
+    # it's important that it's a single segment with int16 dtype
+    # during this step, the entire recording will be downloaded to disk
+    recording2 = _make_binary_recording(recording)
+
+    # run kilosort3 in the container
+    container_method = os.getenv('CONTAINER_METHOD', 'none')
+    sorting_params = {
+        'detect_threshold': data.detect_threshold,
+        'projection_threshold': data.projection_threshold,
+        'preclust_threshold': data.preclust_threshold,
+        'car': data.car,
+        'minFR': data.minFR,
+        'minfr_goodchannels': data.minfr_goodchannels,
+        'nblocks': data.nblocks,
+        'sig': data.sig,
+        'freq_min': data.freq_min,
+        'sigmaMask': data.sigmaMask,
+        'nPCs': data.nPCs,
+        'ntbuff': data.ntbuff,
+        'nfilt_factor': data.nfilt_factor,
+        'do_correction': data.do_correction,
+        'NT': data.NT,
+        'AUCsplit': data.AUCsplit,
+        'wave_length': data.wave_length,
+        'keep_good_only': data.keep_good_only,
+        'skip_kilosort_preprocessing': data.skip_kilosort_preprocessing,
+        'scaleproc': data.scaleproc
+    }
+    sorting = run_kilosort3(
+        recording=recording2,
+        sorting_params=sorting_params,
+        output_folder=working_dir,
+        use_docker=container_method == 'docker',
+        use_singularity=container_method == 'singularity'
+    )
 
     with pynwb.NWBHDF5IO(file=h5py.File(remf, 'r'), mode='r') as io:
         nwbfile_rec = io.read()
@@ -102,5 +135,26 @@ def _run(context: NeurobassProcessingToolContext):
 
         create_sorting_out_nwb_file(nwbfile_rec=nwbfile_rec, sorting=sorting, sorting_out_fname=sorting_out_fname)
         
-        sorting_url = context.upload_output_file(sorting_out_fname, 'sorting.nwb')
-        context.set_output_file_url(data.output, sorting_url)
+    context.upload_output_file(data.output, sorting_out_fname)
+
+def _make_binary_recording(recording: si.BaseRecording) -> si.BinaryRecordingExtractor:
+    os.mkdir('binary_recording')
+    fname = 'binary_recording/recording.dat'
+    if recording.get_num_segments() != 1:
+        raise NotImplementedError("Can only write recordings with a single segment")
+    if recording.get_dtype() != np.int16:
+        raise NotImplementedError("Can only write recordings with dtype int16") # important so it won't be rewritten for kilosort3
+    si.BinaryRecordingExtractor.write_recording(
+        recording=recording,
+        file_paths=[fname],
+        dtype='int16'
+    )
+    ret = si.BinaryRecordingExtractor(
+        file_paths=[fname],
+        sampling_frequency=recording.get_sampling_frequency(),
+        channel_ids=recording.get_channel_ids(),
+        num_chan=recording.get_num_channels(),
+        dtype='int16'
+    )
+    ret.set_channel_locations(recording.get_channel_locations())
+    return ret

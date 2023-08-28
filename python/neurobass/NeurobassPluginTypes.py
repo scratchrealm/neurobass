@@ -12,10 +12,12 @@ except:
     PydanticUndefined = None
 
 class InputFile(BaseModel):
+    name: str
     path: str
     content_string: str
 
 class OutputFile(BaseModel):
+    name: str
     path: str
 
 class NeurobassProcessingToolContext(ABC):
@@ -28,7 +30,7 @@ class NeurobassProcessingToolContext(ABC):
         """
         pass
     @abstractmethod
-    def get_input_file_url(self, input_file: InputFile):
+    def get_input_file_url(self, input_file: InputFile) -> str:
         """Return the URL of the input file
 
         Args:
@@ -39,24 +41,11 @@ class NeurobassProcessingToolContext(ABC):
         """
         pass
     @abstractmethod
-    def upload_output_file(self, path: str, name: str) -> str:
+    def upload_output_file(self, output_file: OutputFile, path: str):
         """Upload a file to the output cloud bucket
 
         Args:
             path (str): path of the local file to upload
-            name (str): base name of the file in the cloud bucket
-
-        Returns:
-            str: the URL of the uploaded file
-        """
-        pass
-    @abstractmethod
-    def set_output_file_url(self, name: str, url: str):
-        """Set the output file URL
-
-        Args:
-            name (str): the name of the output file
-            url (str): the URL of the output file
         """
         pass
 

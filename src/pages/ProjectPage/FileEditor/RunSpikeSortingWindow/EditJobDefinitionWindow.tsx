@@ -1,4 +1,4 @@
-import { FunctionComponent, useCallback, useMemo } from "react";
+import { FunctionComponent, useCallback, useEffect, useMemo } from "react";
 import { NBProcessingJobDefinition } from "../../../../dbInterface/dbInterface";
 import { RemoteH5File } from "../../../../RemoteH5File/RemoteH5File";
 import { ProcessingToolSchema } from "../../../../types/neurobass-types";
@@ -190,11 +190,19 @@ type ElectricalSeriesPathSelectorProps = {
 const ElectricalSeriesPathSelector: FunctionComponent<ElectricalSeriesPathSelectorProps> = ({value, nwbFile, setValue}) => {
     const electricalSeriesPaths = useElectricalSeriesPaths(nwbFile)
 
+    useEffect(() => {
+        if (value) return
+        if (!electricalSeriesPaths) return
+        if (electricalSeriesPaths.length === 0) return
+        setValue(electricalSeriesPaths[0])
+    }, [value, electricalSeriesPaths, setValue])
+
     if (!electricalSeriesPaths) return <div>Loading...</div>
+    if (electricalSeriesPaths.length === 0) return <div>No electrical series found.</div>
     return (
         <select value={value} onChange={evt => {setValue(evt.target.value)}}>
             {
-                [...electricalSeriesPaths, 'dummy-value'].map(path => (
+                [...electricalSeriesPaths].map(path => (
                     <option key={path} value={path}>{path}</option>
                 ))
             }

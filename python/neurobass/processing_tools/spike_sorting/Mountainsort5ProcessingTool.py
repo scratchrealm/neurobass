@@ -159,5 +159,4 @@ def _run(context: NeurobassProcessingToolContext):
 
         create_sorting_out_nwb_file(nwbfile_rec=nwbfile_rec, sorting=sorting, sorting_out_fname=sorting_out_fname)
         
-        sorting_url = context.upload_output_file(sorting_out_fname, 'sorting.nwb')
-        context.set_output_file_url(data.output, sorting_url)
+    context.upload_output_file(data.output, sorting_out_fname)

@@ -66,10 +66,8 @@ class Daemon:
             json.dump(spec, f, indent=2)
 
         cmd = ["node", f'{this_directory}/js/dist/index.js', "start", "--dir", self.dir]
-        analysis_scripts_dir = f'{Path(__file__).parent}/analysis_scripts'
         env0 = dict(
             os.environ,
-            ANALYSIS_SCRIPTS_DIR=analysis_scripts_dir,
             COMPUTE_RESOURCE_DIR=self.dir
         )
         for k, v in self.the_env.items():

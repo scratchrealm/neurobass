@@ -86,6 +86,14 @@ def run_job():
                     'size': os.path.getsize(path)
                 }
                 json.dump(out, f)
+    
+    print(f'Running job: {tool_name}')
+    for x in job['input_files']:
+        print(f'  Input file: {x["name"]}')
+    for x in job['output_files']:
+        print(f'  Output file: {x["name"]}')
+    for x in job['parameters']:
+        print(f'  Parameter: {x["name"]}: {x["value"]}')
 
     # Create the context and run the tool, which will produce the output files
     tool.run(NeurobassProcessingToolContextImpl())

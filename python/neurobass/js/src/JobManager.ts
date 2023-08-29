@@ -1,10 +1,10 @@
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import treeKill from 'tree-kill';
 import postNeurobassRequestFromComputeResource from "./postNeurobassRequestFromComputeResource";
 import { NBJob } from "./types/neurobass-types";
-import { GetFileRequest, GetJobRequest, NeurobassResponse, SetFileRequest, SetJobPropertyRequest } from "./types/NeurobassRequest";
-import treeKill from 'tree-kill'
+import { GetJobRequest, NeurobassResponse } from "./types/NeurobassRequest";
 
 const numSimultaneousJobs = parseInt(process.env.NUM_SIMULTANEOUS_JOBS || '1')
 
@@ -22,7 +22,7 @@ class JobManager {
         if (this.#runningJobs.length >= numSimultaneousJobs) {
             return false
         }
-        const a = new RunningJob(job)
+        const a = new RunningJob(this.config.dir, job)
         const okay = await a.initiate()
         if (okay) {
             this._addRunningJob(a)
@@ -100,24 +100,68 @@ class JobManager {
 export class RunningJob {
     #onCompletedOrFailedCallbacks: (() => void)[] = []
     #childProcess: ChildProcessWithoutNullStreams | null = null
-    #status: 'pending' | 'running' | 'completed' | 'failed' = 'pending'
-    constructor(public job: NBJob) {
+    #status: 'pending' | 'queued' | 'running' | 'completed' | 'failed' = 'pending'
+    #stopped = false
+    constructor(private dir: string, public job: NBJob) {
     }
     async initiate(): Promise<boolean> {
+        if (this.#childProcess) {
+            throw Error('Unexpected: Child process already running')
+        }
         console.info(`Initiating job: ${this.job.jobId} - ${this.job.toolName}`)
-        const okay = await this._setJobProperty('status', 'running')
-        if (!okay) {
-            console.warn('Unable to set job status to running')
+        
+        const cmd = 'neurobass'
+        const args = ['handle-job', '--job-id', this.job.jobId]
+
+        this.#childProcess = spawn(cmd, args, {
+            cwd: this.dir
+        })
+
+        this.#childProcess.on('error', (err) => {
+            console.warn(err)
+            this._updateStatus()
+        })
+
+        this.#childProcess.on('exit', (code) => {
+            this._updateStatus()
+        })
+
+        this.#childProcess.on('close', (code) => {
+            this._updateStatus()
+        })
+
+        const timer = Date.now()
+        while (Date.now() - timer < 20000) {
+            await this._updateStatus()
+            if (this.#status !== 'pending') {
+                break
+            }
+        }
+
+        if (this.#status === 'pending') {
+            console.warn('Timed out waiting for job to start')
             return false
         }
-        this.#status = 'running'
-        this._run().then(() => { // don't await this!
-            //
-        }).catch((err) => {
-            console.error(err)
-            console.error('Problem running job')
-        })
-        return true
+
+        this._startUpdatingStatus() // don't await this
+    }
+    private async _updateStatus() {
+        const req: GetJobRequest = {
+            type: 'getJob',
+            timestamp: Date.now() / 1000,
+            jobId: this.job.jobId,
+        }
+        const resp = await this._postNeurobassRequest(req)
+        if (resp.type !== 'getJob') {
+            console.warn(resp)
+            throw Error('Unexpected response type. Expected getJob')
+        }
+        const newStatus = resp.job.status
+        if (this.#status === newStatus) return
+        this.#status = newStatus
+        if ((newStatus === 'completed') || (newStatus === 'failed')) {
+            this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
+        }
     }
     onCompletedOrFailed(callback: () => void) {
         this.#onCompletedOrFailedCallbacks.push(callback)
@@ -131,32 +175,11 @@ export class RunningJob {
                 console.warn(e)
                 console.warn('Unable to kill child process in RunningJob:stop()')
             }
+            this.#stopped = true
         }
     }
     public get status() {
         return this.#status
-    }
-    private async _setJobProperty(property: string, value: any): Promise<boolean> {
-        const req: SetJobPropertyRequest = {
-            type: 'setJobProperty',
-            timestamp: Date.now() / 1000,
-            workspaceId: this.job.workspaceId,
-            projectId: this.job.projectId,
-            jobId: this.job.jobId,
-            property,
-            value,
-            computeResourceNodeId: process.env.COMPUTE_RESOURCE_NODE_ID,
-            computeResourceNodeName: process.env.COMPUTE_RESOURCE_NODE_NAME || ''
-        }
-        const resp = await this._postNeurobassRequest(req)
-        if (!resp) {
-            throw Error(`Unable to set job property: ${property} = ${value}`)
-        }
-        if (resp.type !== 'setJobProperty') {
-            console.warn(resp)
-            throw Error('Unexpected response type. Expected setJobProperty')
-        }
-        return resp.success
     }
     private async _postNeurobassRequest(req: any): Promise<NeurobassResponse> {
         return await postNeurobassRequestFromComputeResource(req, {
@@ -164,235 +187,20 @@ export class RunningJob {
             computeResourcePrivateKey: process.env.COMPUTE_RESOURCE_PRIVATE_KEY
         })
     }
-    private async _run() {
-        if (this.#childProcess) {
-            throw Error('Unexpected: Child process already running')
-        }
-
-        let consoleOutput = ''
-        let lastUpdateConsoleOutputTimestamp = Date.now()
-        const updateConsoleOutput = async () => {
-            lastUpdateConsoleOutputTimestamp = Date.now()
-            const okay = await this._setJobProperty('consoleOutput', consoleOutput)
-            if (!okay) {
-                // maybe the job no longer exists
-                console.warn('Unable to set job console output. Maybe job no longer exists.')
+    async _startUpdatingStatus() {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            if (this.#stopped) break
+            await this._updateStatus()
+            if (this.#status === 'completed') {
+                break
             }
-        }
-        let lastCheckCanceledTimestamp = Date.now()
-        const checkCanceled = async () => {
-            lastCheckCanceledTimestamp = Date.now()
-            const req: GetJobRequest = {
-                type: 'getJob',
-                timestamp: Date.now() / 1000,
-                jobId: this.job.jobId
+            if (this.#status === 'failed') {
+                break
             }
-            try {
-                const resp = await this._postNeurobassRequest(req)
-                if (resp.type !== 'getJob') {
-                    console.warn(resp)
-                    throw Error('Unexpected response type. Expected getJob')
-                }
-            }
-            catch(err) {
-                console.warn(err)
-                console.warn('Unable to get job. Canceling')
-                this.stop()
-            }
-        }
-        try {
-            const toolName = this.job.toolName
-            const jobDir = path.join(process.env.COMPUTE_RESOURCE_DIR, 'jobs', this.job.jobId)
-            fs.mkdirSync(jobDir, {recursive: true})
-
-            const jobJsonFilePath = path.join(jobDir, 'job.json')
-            const input_files = []
-            for (const a of this.job.inputFiles) {
-                const req: GetFileRequest = {
-                    type: 'getFile',
-                    timestamp: Date.now() / 1000,
-                    projectId: this.job.projectId,
-                    fileName: a.fileName
-                }
-                const resp = await this._postNeurobassRequest(req)
-                if (resp.type !== 'getFile') {
-                    console.warn(resp)
-                    throw Error('Unexpected response type. Expected getFile')
-                }
-                const content_string = resp.file.content
-                input_files.push({
-                    name: a.name,
-                    path: a.fileName,
-                    content_string
-                })
-            }
-            const output_files = []
-            for (const a of this.job.outputFiles) {
-                output_files.push({
-                    name: a.name,
-                    path: a.fileName
-                })
-            }
-            const parameters = []
-            for (const a of this.job.inputParameters) {
-                parameters.push({
-                    name: a.name,
-                    value: a.value
-                })
-            }
-            const jobJson = {
-                tool_name: toolName,
-                input_files,
-                output_files,
-                parameters
-            }
-            fs.writeFileSync(jobJsonFilePath, JSON.stringify(jobJson, null, 4))
-
-            const runShContent = `
-set -e # exit on error and use return code of last command as return code of script
-clean_up () {
-    ARG=$?
-    chmod -R 777 * # make sure all files are readable by everyone so that they can be deleted even if owned by docker user
-    exit $ARG
-} 
-trap clean_up EXIT
-
-export CONTAINER_METHOD=${process.env.CONTAINER_METHOD}
-export OUTPUT_ENDPOINT_URL=${process.env.OUTPUT_ENDPOINT_URL}
-export OUTPUT_AWS_ACCESS_KEY_ID=${process.env.OUTPUT_AWS_ACCESS_KEY_ID}
-export OUTPUT_AWS_SECRET_ACCESS_KEY=${process.env.OUTPUT_AWS_SECRET_ACCESS_KEY}
-export OUTPUT_BUCKET=${process.env.OUTPUT_BUCKET}
-export OUTPUT_BUCKET_BASE_URL=${process.env.OUTPUT_BUCKET_BASE_URL}
-
-neurobass run-job
-`
-            fs.writeFileSync(path.join(jobDir, 'run.sh'), runShContent)
-
-            await new Promise<void>((resolve, reject) => {
-                let returned = false
-
-                const cmd = 'bash'
-                const args = ['run.sh']
-
-                console.info('WORKING DIR:', jobDir)
-                console.info('EXECUTING:', `${cmd} ${args.join(' ')}`)
-
-                const timeoutSec = 60 * 60 * 3 // 3 hours
-
-                this.#childProcess = spawn(cmd, args, {
-                    cwd: jobDir
-                })
-
-                const timeoutId = setTimeout(() => {
-                    if (returned) return
-                    console.info(`Killing job: ${this.job.jobId} - ${toolName} due to timeout`)
-                    returned = true
-                    this.#childProcess.kill()
-                    reject(Error('Timeout'))
-                }, timeoutSec * 1000)
-
-                this.#childProcess.stdout.on('data', (data: any) => {
-                    console.log(`stdout: ${data}`)
-                    consoleOutput += data
-                    if (Date.now() - lastUpdateConsoleOutputTimestamp > 10000) {
-                        updateConsoleOutput()
-                    }
-                })
-                this.#childProcess.stderr.on('data', (data: any) => {
-                    console.error(`stderr: ${data}`)
-                    consoleOutput += data
-                    if (Date.now() - lastUpdateConsoleOutputTimestamp > 10000) {
-                        updateConsoleOutput()
-                    }
-                })
-                this.#childProcess.on('error', (error: any) => {
-                    if (returned) return
-                    returned = true
-                    clearTimeout(timeoutId)
-                    reject(error)
-                })
-                this.#childProcess.on('close', (code: any) => {
-                    if (returned) return
-                    returned = true
-                    clearTimeout(timeoutId)
-                    if (code !== 0) {
-                        reject(Error(`Process exited with code ${code}`))
-                    }
-                    else {
-                        resolve()
-                    }
-                })
-
-                ; (async () => {
-                    while (!returned) {
-                        await new Promise<void>((resolve2) => {
-                            setTimeout(() => {
-                                resolve2()
-                            }, 1000)
-                        })
-                        if (Date.now() - lastCheckCanceledTimestamp > 60000) {
-                            checkCanceled()
-                        }
-                    }
-                })()
-            })
-            
-            await updateConsoleOutput()
-
-            for (const a of this.job.outputFiles) {
-                const outputFname = path.join(jobDir, 'outputs', `${a.name}.json`)
-                if (!fs.existsSync(outputFname)) {
-                    throw Error(`Unexpected: output file not found: ${outputFname}`)
-                }
-
-                const outputText = fs.readFileSync(outputFname, {encoding: 'utf8'})
-                const output: {url: string, size: number} = JSON.parse(outputText)
-
-                const req: SetFileRequest = {
-                    type: 'setFile',
-                    timestamp: Date.now() / 1000,
-                    projectId: this.job.projectId,
-                    workspaceId: this.job.workspaceId,
-                    fileName: a.fileName,
-                    content: `url:${output.url}`,
-                    size: output.size,
-                    jobId: this.job.jobId,
-                    metadata: {}
-                }
-                const resp = await this._postNeurobassRequest(req)
-                if (resp.type !== 'setFile') {
-                    console.warn(resp)
-                    throw Error('Unexpected response type. Expected setFile')
-                }
-            }
-
-            await this._setJobProperty('status', 'completed')
-            this.#status = 'completed'
-
-            this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
-        }
-        catch (err) {
-            await updateConsoleOutput()
-            await this._setJobProperty('error', err.message)
-            await this._setJobProperty('status', 'failed')
-            this.#status = 'failed'
-
-            this.#onCompletedOrFailedCallbacks.forEach(cb => cb())
-            return
+            await new Promise(r => setTimeout(r, 10000))
         }
     }
 }
-
-// const runCommand = async (cmd: string): Promise<{stdout: string, stderr: string}> => {
-//     return new Promise<{stdout: string, stderr: string}>((resolve, reject) => {
-//         exec(cmd, (err, stdout, stderr) => {
-//             if (err) {
-//                 reject(err)
-//                 return
-//             }
-//             resolve({stdout, stderr})
-//         })
-//     })
-// }
 
 export default JobManager

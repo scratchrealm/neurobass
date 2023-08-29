@@ -744,8 +744,6 @@ export const isDeleteJobResponse = (x: any): x is DeleteJobResponse => {
 export type GetJobRequest = {
     type: 'getJob'
     timestamp: number
-    workspaceId: string
-    projectId: string
     jobId: string
 }
 
@@ -753,8 +751,6 @@ export const isGetJobRequest = (x: any): x is GetJobRequest => {
     return validateObject(x, {
         type: isEqualTo('getJob'),
         timestamp: isNumber,
-        workspaceId: isString,
-        projectId: isString,
         jobId: isString
     })
 }

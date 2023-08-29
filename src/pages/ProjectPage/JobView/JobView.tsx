@@ -12,7 +12,7 @@ type Props = {
     jobId: string
 }
 
-const useJob = (workspaceId: string, projectId: string, jobId: string) => {
+const useJob = (jobId: string) => {
     const [job, setJob] = useState<NBJob | undefined>()
 
     const [refreshCode, setRefreshCode] = useState(0)
@@ -28,20 +28,19 @@ const useJob = (workspaceId: string, projectId: string, jobId: string) => {
         ;(async () => {
             setJob(undefined)
             if (!jobId) return
-            const job = await fetchJob(workspaceId, projectId, jobId, auth)
+            const job = await fetchJob(jobId, auth)
             if (canceled) return
             setJob(job)
         })()
         return () => {
             canceled = true
         }
-    }, [workspaceId, projectId, jobId, auth, refreshCode])
+    }, [jobId, auth, refreshCode])
     return {job, refreshJob}
 }
 
 const JobView: FunctionComponent<Props> = ({ width, height, jobId }) => {
-    const {workspaceId, projectId} = useProject()
-    const {job, refreshJob} = useJob(workspaceId, projectId, jobId)
+    const {job, refreshJob} = useJob(jobId)
     if (!job) {
         return (
             <p>Loading job {jobId}</p>

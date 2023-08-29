@@ -185,8 +185,6 @@ export class RunningJob {
             const req: GetJobRequest = {
                 type: 'getJob',
                 timestamp: Date.now() / 1000,
-                workspaceId: this.job.workspaceId,
-                projectId: this.job.projectId,
                 jobId: this.job.jobId
             }
             try {

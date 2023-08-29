@@ -453,12 +453,10 @@ export const fetchJobsForComputeResource = async (computeResourceId: string, aut
     return resp.jobs
 }
 
-export const fetchJob = async (workspaceId: string, projectId: string, jobId: string, auth: Auth): Promise<NBJob | undefined> => {
+export const fetchJob = async (jobId: string, auth: Auth): Promise<NBJob | undefined> => {
     const req: GetJobRequest = {
         type: 'getJob',
         timestamp: Date.now() / 1000,
-        workspaceId,
-        projectId,
         jobId
     }
     const resp = await postNeurobassRequest(req, {...auth})

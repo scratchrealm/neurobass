@@ -3,6 +3,7 @@ import neurobass
 from .init_compute_resource_node import init_compute_resource_node as init_compute_resource_node_function
 from .start_compute_resource_node import start_compute_resource_node as start_compute_resource_node_function
 from .run_job import run_job as run_job_function
+from .handle_job import handle_job as handle_job_function
 
 @click.group(help="neurobass command line interface")
 def main():
@@ -22,6 +23,11 @@ def start_compute_resource_node():
 def run_job():
     run_job_function()
 
+@click.command(help='Handle a job by interacting with the neurobass REST API (used internally)')
+@click.option('--job-id', help='Job ID')
+def handle_job(job_id: str):
+    handle_job_function(job_id=job_id)
+
 @click.command(help='Initialize the singularity container')
 def init_singularity_container():
     neurobass.init_singularity_container()
@@ -33,5 +39,6 @@ def init_docker_container():
 main.add_command(init_compute_resource_node)
 main.add_command(start_compute_resource_node)
 main.add_command(run_job)
+main.add_command(handle_job)
 main.add_command(init_singularity_container)
 main.add_command(init_docker_container)
